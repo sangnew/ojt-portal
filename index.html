@@ -154,17 +154,18 @@
 <div id="app" class="wrap" hidden>
   <header class="top">
     <div>
-      <p class="eyebrow"><span class="dot"></span>내가 채우는 학습 포털</p>
-      <h1>상구의 모비스 탐험기</h1>
+      <p class="eyebrow"><span class="dot"></span><span id="app-eyebrow">내가 채우는 학습 포털</span></p>
+      <h1 id="app-title">상구의 모비스 탐험기</h1>
     </div>
     <button class="signout-btn" id="signout-btn" type="button">로그아웃</button>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button class="tab-btn" data-tab="materials" role="tab" aria-selected="true">학습자료</button>
-    <button class="tab-btn" data-tab="glossary" role="tab" aria-selected="false">용어집</button>
-    <button class="tab-btn" data-tab="notes" role="tab" aria-selected="false">노트</button>
-    <button class="tab-btn" data-tab="report" role="tab" aria-selected="false">보고서</button>
+    <button class="tab-btn" data-tab="materials" role="tab" aria-selected="true" id="tab-materials">학습자료</button>
+    <button class="tab-btn" data-tab="glossary" role="tab" aria-selected="false" id="tab-glossary">용어집</button>
+    <button class="tab-btn" data-tab="notes" role="tab" aria-selected="false" id="tab-notes">노트</button>
+    <button class="tab-btn" data-tab="report" role="tab" aria-selected="false" id="tab-report">보고서</button>
+    <button class="tab-btn lang-btn" id="lang-toggle-btn" type="button">Eng. Version</button>
   </nav>
 
   <section id="panel-materials">
@@ -200,10 +201,10 @@
   </section>
 
   <section id="panel-report" hidden>
-    <label class="f-label" for="report-title">보고서 제목</label>
+    <label class="f-label" for="report-title" id="report-title-label">보고서 제목</label>
     <input class="f-input" id="report-title" type="text" placeholder="예: 이번 주 학습 정리" style="margin-bottom:18px;">
-    <label class="f-check" style="margin-bottom:14px;"><input type="checkbox" id="report-include-notes"> 현재 노트 내용 포함</label>
-    <p class="f-label" style="margin-bottom:6px;">포함할 학습자료</p>
+    <label class="f-check" style="margin-bottom:14px;"><input type="checkbox" id="report-include-notes"> <span id="report-include-notes-label">현재 노트 내용 포함</span></label>
+    <p class="f-label" style="margin-bottom:6px;" id="report-materials-label">포함할 학습자료</p>
     <div class="report-list" id="report-list"></div>
     <p class="empty" id="report-empty" hidden>선택할 수 있는 학습자료가 없습니다.</p>
     <div class="f-actions" style="margin-top:0;">
@@ -243,7 +244,8 @@
   var auth = firebase.auth();
   var db = firebase.firestore();
 
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', materialsLoaded: false, glossaryLoaded: false };
+  var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false };
   var lastSyncedNotes = '';
   var unsubMaterials, unsubGlossary, unsubNotes;
 
@@ -255,7 +257,7 @@
     loginError: document.getElementById('login-error'),
     app: document.getElementById('app'),
     signoutBtn: document.getElementById('signout-btn'),
-    tabs: document.querySelectorAll('.tab-btn'),
+    tabs: document.querySelectorAll('.tab-btn[data-tab]'),
     panels: { materials: document.getElementById('panel-materials'), glossary: document.getElementById('panel-glossary'), notes: document.getElementById('panel-notes'), report: document.getElementById('panel-report') },
     matList: document.getElementById('mat-list'),
     matEmpty: document.getElementById('mat-empty'),
@@ -275,12 +277,89 @@
     reportList: document.getElementById('report-list'),
     reportEmpty: document.getElementById('report-empty'),
     reportExportBtn: document.getElementById('report-export-btn'),
+    reportTitleLabel: document.getElementById('report-title-label'),
+    reportIncludeNotesLabel: document.getElementById('report-include-notes-label'),
+    reportMaterialsLabel: document.getElementById('report-materials-label'),
+    appEyebrow: document.getElementById('app-eyebrow'),
+    appTitle: document.getElementById('app-title'),
+    langToggleBtn: document.getElementById('lang-toggle-btn'),
     overlay: document.getElementById('modal-overlay'),
     modal: document.querySelector('#modal-overlay .modal'),
     modalTitle: document.getElementById('modal-title'),
     modalBody: document.getElementById('modal-body'),
     toast: document.getElementById('toast'),
   };
+
+  // ---- i18n ----
+  var I18N = {
+    ko: {
+      appEyebrow: '내가 채우는 학습 포털', appTitle: '상구의 모비스 탐험기', signout: '로그아웃',
+      tabMaterials: '학습자료', tabGlossary: '용어집', tabNotes: '노트', tabReport: '보고서', langToggle: 'Eng. Version',
+      matSearchPh: '자료 검색…', matAddBtn: '새 자료 추가', matEmpty: '등록된 자료가 없습니다. "새 자료 추가"로 첫 항목을 만들어보세요.',
+      glSearchPh: '용어 검색…', glAddBtn: '새 용어 추가', glEmpty: '등록된 용어가 없습니다.',
+      noResults: '검색 결과가 없습니다.', loading: '불러오는 중…', renderError: '화면 렌더링 오류: ',
+      notesPh: '오늘 배운 내용, 궁금한 점을 자유롭게 적어보세요. 다른 기기에서도 그대로 이어집니다.',
+      notesWaiting: '동기화 대기 중…', notesSaving: '저장 중…', notesSaved: '저장됨 · ', notesSynced: '동기화됨 · ',
+      notesClearBtn: '지우기', notesExportBtn: '텍스트로 내보내기', notesSaveMaterialBtn: '학습자료로 저장',
+      reportTitleLabel: '보고서 제목', reportTitlePh: '예: 이번 주 학습 정리', reportIncludeNotes: '현재 노트 내용 포함',
+      reportMaterialsLabel: '포함할 학습자료', reportEmpty: '선택할 수 있는 학습자료가 없습니다.', reportExportBtn: '보고서로 내보내기',
+      catOther: '기타', catMyNotes: '내 노트', badgeExample: '예시',
+      matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
+      matCategoryPh: '예: 품질, 공정관리, 용접', richtextPh: '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)',
+      btnCancel: '취소', btnSave: '저장', btnDelete: '삭제', btnClose: '닫기', btnEdit: '수정',
+      toastSaved: '저장되었습니다', toastDeleted: '삭제되었습니다', toastTitleRequired: '제목을 입력해주세요',
+      toastDupMaterial: '이미 저장된 자료입니다',
+      errPermission: '권한이 없습니다', errCode: '오류 ({code})', errGeneric: '오류가 발생했습니다',
+      glFormAdd: '새 용어 추가', glFormEdit: '용어 수정', fieldTermKr: '한글', fieldTermEn: '영문', fieldDept: '부서',
+      deptPh: '예: KPI, Quality, Material', fieldDef: '정의', fieldCalc: '산출법/계산식 (있는 경우)',
+      fieldImportant: '중요 용어로 표시 (색상 강조)', toastTermRequired: '용어(한글 또는 영문)를 입력해주세요',
+      toastDupGlossary: '이미 저장된 용어입니다', glCalcPrefix: '산출법: ',
+      smFormTitle: '노트를 학습자료로 저장', catMyNotesPh: '예: 내 노트', fieldClearAfterSave: '저장 후 노트 비우기',
+      toastNoNoteContent: '저장할 노트 내용이 없습니다',
+      reportDefaultTitle: '제목 없는 보고서', reportPickSomething: '포함할 자료나 노트를 선택해주세요',
+      reportWrittenOn: '작성일: ', reportNoteHeading: '[노트]', reportNoContent: '(내용 없음)',
+      reportExported: '보고서를 내보냈습니다', reportFallbackName: '보고서', notesFilePrefix: '노트_',
+    },
+    en: {
+      appEyebrow: 'A learning portal I fill in myself', appTitle: "Sangku's Mobis Exploration", signout: 'Sign out',
+      tabMaterials: 'Materials', tabGlossary: 'Glossary', tabNotes: 'Notes', tabReport: 'Report', langToggle: '한국어',
+      matSearchPh: 'Search materials…', matAddBtn: 'Add material', matEmpty: 'No materials yet. Use "Add material" to create your first one.',
+      glSearchPh: 'Search terms…', glAddBtn: 'Add term', glEmpty: 'No terms yet.',
+      noResults: 'No results found.', loading: 'Loading…', renderError: 'Render error: ',
+      notesPh: 'Jot down what you learned today or any questions — it stays in sync across your devices.',
+      notesWaiting: 'Waiting to sync…', notesSaving: 'Saving…', notesSaved: 'Saved · ', notesSynced: 'Synced · ',
+      notesClearBtn: 'Clear', notesExportBtn: 'Export as text', notesSaveMaterialBtn: 'Save as material',
+      reportTitleLabel: 'Report title', reportTitlePh: "e.g. This week's learning summary", reportIncludeNotes: 'Include current notes',
+      reportMaterialsLabel: 'Materials to include', reportEmpty: 'No materials available to select.', reportExportBtn: 'Export report',
+      catOther: 'Other', catMyNotes: 'My Notes', badgeExample: 'Example',
+      matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
+      matCategoryPh: 'e.g. Quality, Process, Welding', richtextPh: 'You can paste rich text — bold/lists/tables are preserved',
+      btnCancel: 'Cancel', btnSave: 'Save', btnDelete: 'Delete', btnClose: 'Close', btnEdit: 'Edit',
+      toastSaved: 'Saved', toastDeleted: 'Deleted', toastTitleRequired: 'Please enter a title',
+      toastDupMaterial: 'This material is already saved',
+      errPermission: 'Permission denied', errCode: 'Error ({code})', errGeneric: 'An error occurred',
+      glFormAdd: 'Add term', glFormEdit: 'Edit term', fieldTermKr: 'Korean', fieldTermEn: 'English', fieldDept: 'Department',
+      deptPh: 'e.g. KPI, Quality, Material', fieldDef: 'Definition', fieldCalc: 'Formula / calculation (if any)',
+      fieldImportant: 'Mark as important (highlight)', toastTermRequired: 'Please enter a term (Korean or English)',
+      toastDupGlossary: 'This term is already saved', glCalcPrefix: 'Formula: ',
+      smFormTitle: 'Save note as material', catMyNotesPh: 'e.g. My Notes', fieldClearAfterSave: 'Clear notes after saving',
+      toastNoNoteContent: "There's no note content to save",
+      reportDefaultTitle: 'Untitled report', reportPickSomething: 'Please select materials or notes to include',
+      reportWrittenOn: 'Written on: ', reportNoteHeading: '[Notes]', reportNoContent: '(no content)',
+      reportExported: 'Report exported', reportFallbackName: 'report', notesFilePrefix: 'notes_',
+    },
+  };
+  state.lang = 'ko';
+  try { if (localStorage.getItem('ojt-lang') === 'en') state.lang = 'en'; } catch (e) {}
+  function t(key) { return (I18N[state.lang] && I18N[state.lang][key] != null) ? I18N[state.lang][key] : (I18N.ko[key] || key); }
+  // Only the app's own default category labels ("기타"/"내 노트") are translated for
+  // display; free-form categories the user typed themselves are shown as-is, since we
+  // can't reliably machine-translate arbitrary user content.
+  function displayCategory(c) {
+    if (c === '기타') return t('catOther');
+    if (c === '내 노트') return t('catMyNotes');
+    return c;
+  }
 
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -346,9 +425,9 @@
     toastTimer = setTimeout(function () { el.toast.classList.remove('show'); }, 2400);
   }
   function errMsg(e) {
-    if (e && e.code === 'permission-denied') return '권한이 없습니다';
-    if (e && e.code) return '오류 (' + e.code + ')';
-    return '오류가 발생했습니다';
+    if (e && e.code === 'permission-denied') return t('errPermission');
+    if (e && e.code) return t('errCode').replace('{code}', e.code);
+    return t('errGeneric');
   }
 
   function switchTab(name) {
@@ -356,6 +435,39 @@
     el.tabs.forEach(function (btn) { btn.setAttribute('aria-selected', btn.dataset.tab === name ? 'true' : 'false'); });
   }
   el.tabs.forEach(function (btn) { btn.addEventListener('click', function () { switchTab(btn.dataset.tab); }); });
+
+  function applyLang() {
+    document.getElementById('tab-materials').textContent = t('tabMaterials');
+    document.getElementById('tab-glossary').textContent = t('tabGlossary');
+    document.getElementById('tab-notes').textContent = t('tabNotes');
+    document.getElementById('tab-report').textContent = t('tabReport');
+    el.langToggleBtn.textContent = t('langToggle');
+    el.appEyebrow.textContent = t('appEyebrow');
+    el.appTitle.textContent = t('appTitle');
+    el.signoutBtn.textContent = t('signout');
+    el.matSearch.placeholder = t('matSearchPh');
+    el.matAddBtn.textContent = t('matAddBtn');
+    el.glSearch.placeholder = t('glSearchPh');
+    el.glAddBtn.textContent = t('glAddBtn');
+    el.notesArea.placeholder = t('notesPh');
+    el.notesClearBtn.textContent = t('notesClearBtn');
+    el.notesExportBtn.textContent = t('notesExportBtn');
+    el.notesSaveMaterialBtn.textContent = t('notesSaveMaterialBtn');
+    el.reportTitleLabel.textContent = t('reportTitleLabel');
+    el.reportTitle.placeholder = t('reportTitlePh');
+    el.reportIncludeNotesLabel.textContent = t('reportIncludeNotes');
+    el.reportMaterialsLabel.textContent = t('reportMaterialsLabel');
+    el.reportExportBtn.textContent = t('reportExportBtn');
+    if (el.notesStatus.textContent === I18N.ko.notesWaiting || el.notesStatus.textContent === I18N.en.notesWaiting) {
+      el.notesStatus.textContent = t('notesWaiting');
+    }
+    renderMaterials(); renderGlossary(); renderReportList();
+  }
+  el.langToggleBtn.addEventListener('click', function () {
+    state.lang = state.lang === 'en' ? 'ko' : 'en';
+    try { localStorage.setItem('ojt-lang', state.lang); } catch (e) {}
+    applyLang();
+  });
 
   function closeModal() { el.overlay.hidden = true; el.modalBody.innerHTML = ''; el.modal.classList.remove('modal-large'); }
   var overlayMousedownOnSelf = false;
@@ -373,7 +485,7 @@
       }
       html += '<label class="f-label" for="' + f.id + '">' + escapeHtml(f.label) + '</label>';
       if (f.type === 'richtext') {
-        html += '<div class="f-input f-richtext" id="' + f.id + '" contenteditable="true" data-placeholder="' + escapeHtml(f.placeholder || '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)') + '">' + (f.value || '') + '</div>';
+        html += '<div class="f-input f-richtext" id="' + f.id + '" contenteditable="true" data-placeholder="' + escapeHtml(f.placeholder || t('richtextPh')) + '">' + (f.value || '') + '</div>';
       } else if (f.type === 'textarea') {
         html += '<textarea class="f-input f-textarea" id="' + f.id + '" rows="6" placeholder="' + escapeHtml(f.placeholder || '') + '">' + escapeHtml(f.value || '') + '</textarea>';
       } else {
@@ -381,8 +493,8 @@
       }
     });
     html += '<div class="f-actions">' +
-      (opts.onDelete ? '<button type="button" class="btn btn-danger" id="f-delete">삭제</button>' : '<span></span>') +
-      '<div class="f-actions-right"><button type="button" class="btn btn-ghost" id="f-cancel">취소</button><button type="button" class="btn btn-accent" id="f-save">저장</button></div></div>';
+      (opts.onDelete ? '<button type="button" class="btn btn-danger" id="f-delete">' + escapeHtml(t('btnDelete')) + '</button>' : '<span></span>') +
+      '<div class="f-actions-right"><button type="button" class="btn btn-ghost" id="f-cancel">' + escapeHtml(t('btnCancel')) + '</button><button type="button" class="btn btn-accent" id="f-save">' + escapeHtml(t('btnSave')) + '</button></div></div>';
     el.modalBody.innerHTML = html;
     el.overlay.hidden = false;
     opts.fields.forEach(function (f) {
@@ -404,7 +516,7 @@
       document.getElementById('f-delete').addEventListener('click', function () {
         var delBtn = document.getElementById('f-delete');
         delBtn.disabled = true;
-        Promise.resolve(opts.onDelete()).then(function () { closeModal(); showToast('삭제되었습니다'); })
+        Promise.resolve(opts.onDelete()).then(function () { closeModal(); showToast(t('toastDeleted')); })
           .catch(function (e) { delBtn.disabled = false; showToast(errMsg(e)); });
       });
     }
@@ -422,7 +534,7 @@
       saveBtn.disabled = true;
       Promise.resolve(result).then(function (ok) {
         if (ok === false) { saveBtn.disabled = false; return; }
-        closeModal(); showToast('저장되었습니다');
+        closeModal(); showToast(t('toastSaved'));
       }).catch(function (e) { saveBtn.disabled = false; showToast(errMsg(e)); });
     });
   }
@@ -435,8 +547,8 @@
     el.modalBody.innerHTML = '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
       bodyMarkup +
       '<div class="f-actions"><span></span><div class="f-actions-right">' +
-      '<button type="button" class="btn btn-ghost" id="f-close">닫기</button>' +
-      '<button type="button" class="btn btn-accent" id="f-edit">수정</button></div></div>';
+      '<button type="button" class="btn btn-ghost" id="f-close">' + escapeHtml(t('btnClose')) + '</button>' +
+      '<button type="button" class="btn btn-accent" id="f-edit">' + escapeHtml(t('btnEdit')) + '</button></div></div>';
     el.modal.classList.add('modal-large');
     el.overlay.hidden = false;
     document.getElementById('f-close').addEventListener('click', closeModal);
@@ -451,19 +563,19 @@
   }
   function openMaterialForm(m) {
     openForm({
-      title: m ? '자료 수정' : '새 자료 추가',
+      title: m ? t('matFormEdit') : t('matFormAdd'),
       fields: [
-        { id: 'f-mat-title', label: '제목', value: m ? m.title : '' },
-        { id: 'f-mat-category', label: '카테고리', value: m ? m.category : '', placeholder: '예: 품질, 공정관리, 용접' },
-        { id: 'f-mat-body', label: '내용', type: 'richtext', value: materialBodyEditableHtml(m) },
+        { id: 'f-mat-title', label: t('fieldTitle'), value: m ? m.title : '' },
+        { id: 'f-mat-category', label: t('fieldCategory'), value: m ? m.category : '', placeholder: t('matCategoryPh') },
+        { id: 'f-mat-body', label: t('fieldContent'), type: 'richtext', value: materialBodyEditableHtml(m) },
       ],
-      onDelete: m ? function () { return db.collection('materials').doc(m.id).delete(); } : null,
+      onDelete: (m && state.isOwner) ? function () { return db.collection('materials').doc(m.id).delete(); } : null,
       onSave: function (v) {
-        if (!v['f-mat-title']) { showToast('제목을 입력해주세요'); return false; }
+        if (!v['f-mat-title']) { showToast(t('toastTitleRequired')); return false; }
         var payload = { title: v['f-mat-title'], category: v['f-mat-category'] || '기타', body: v['f-mat-body'], bodyIsHtml: true };
         var plainBody = stripTags(v['f-mat-body']);
         if (m) return db.collection('materials').doc(m.id).update(payload);
-        if (findDuplicateMaterial(payload.title, plainBody)) { showToast('이미 저장된 자료입니다'); return false; }
+        if (findDuplicateMaterial(payload.title, plainBody)) { showToast(t('toastDupMaterial')); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
         return db.collection('materials').add(payload);
@@ -473,14 +585,14 @@
   function openMaterialDetail(m) {
     openDetail({
       title: m.title,
-      meta: (m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (m.isExample ? ' · 예시 항목' : ''),
+      meta: displayCategory(m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (m.isExample ? ' · ' + t('badgeExample') : ''),
       body: m.body || '',
       bodyIsHtml: !!m.bodyIsHtml,
       onEdit: function () { openMaterialForm(m); },
     });
   }
   function renderMaterials() {
-    if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
+    if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
     try {
       var q = state.matQuery.trim().toLowerCase();
       function matPlain(m) { return m.bodyIsHtml ? stripTags(m.body) : (m.body || ''); }
@@ -489,17 +601,18 @@
         return (m.title || '').toLowerCase().indexOf(q) !== -1 || matPlain(m).toLowerCase().indexOf(q) !== -1 || (m.category || '').toLowerCase().indexOf(q) !== -1;
       });
       el.matEmpty.hidden = filtered.length !== 0 || state.materials.length !== 0;
+      el.matEmpty.textContent = t('matEmpty');
       if (!state.materials.length) { el.matList.innerHTML = ''; return; }
-      if (!filtered.length) { el.matList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
+      if (!filtered.length) { el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('noResults')) + '</p>'; return; }
       var groups = {};
       filtered.forEach(function (m) { var c = m.category || '기타'; (groups[c] = groups[c] || []).push(m); });
-      var cats = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'ko'); });
+      var cats = Object.keys(groups).sort(function (a, b) { return displayCategory(a).localeCompare(displayCategory(b), 'ko'); });
       var html = '';
       cats.forEach(function (cat) {
-        html += '<div class="cat-label">' + escapeHtml(cat) + '</div><div class="mat-grid">';
+        html += '<div class="cat-label">' + escapeHtml(displayCategory(cat)) + '</div><div class="mat-grid">';
         groups[cat].sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); }).forEach(function (m) {
           var snipSrc = matPlain(m);
-          html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">예시</span>' : '') +
+          html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') +
             '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
             '<span class="mat-card-snip">' + escapeHtml(snipSrc.slice(0, 72)) + (snipSrc.length > 72 ? '…' : '') + '</span></button>';
         });
@@ -511,7 +624,7 @@
       });
     } catch (e) {
       el.matEmpty.hidden = true;
-      el.matList.innerHTML = '<p class="empty">화면 렌더링 오류: ' + escapeHtml(e && e.message ? e.message : String(e)) + '</p>';
+      el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('renderError')) + escapeHtml(e && e.message ? e.message : String(e)) + '</p>';
     }
   }
 
@@ -520,60 +633,61 @@
     if (!state.materialsLoaded) { el.reportList.innerHTML = ''; el.reportEmpty.hidden = true; return; }
     var checkedIds = Array.prototype.slice.call(el.reportList.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) { return c.dataset.id; });
     el.reportEmpty.hidden = state.materials.length !== 0;
+    el.reportEmpty.textContent = t('reportEmpty');
     var sorted = state.materials.slice().sort(function (a, b) { return (a.category || '').localeCompare(b.category || '', 'ko') || (a.title || '').localeCompare(b.title || '', 'ko'); });
     el.reportList.innerHTML = sorted.map(function (m) {
       var checked = checkedIds.indexOf(m.id) !== -1 ? ' checked' : '';
       return '<label class="report-row"><input type="checkbox" data-id="' + m.id + '"' + checked + '>' +
-        '<span><span class="r-title">' + escapeHtml(m.title) + '</span><br><span class="r-meta">' + escapeHtml(m.category || '기타') + '</span></span></label>';
+        '<span><span class="r-title">' + escapeHtml(m.title) + '</span><br><span class="r-meta">' + escapeHtml(displayCategory(m.category || '기타')) + '</span></span></label>';
     }).join('');
   }
   el.reportExportBtn.addEventListener('click', function () {
-    var title = el.reportTitle.value.trim() || '제목 없는 보고서';
+    var title = el.reportTitle.value.trim() || t('reportDefaultTitle');
     var ids = Array.prototype.slice.call(el.reportList.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) { return c.dataset.id; });
     var includeNotes = el.reportIncludeNotes.checked;
-    if (!ids.length && !includeNotes) { showToast('포함할 자료나 노트를 선택해주세요'); return; }
-    var lines = [title, '작성일: ' + fmtDate(new Date().toISOString()), ''.padEnd(40, '=')];
+    if (!ids.length && !includeNotes) { showToast(t('reportPickSomething')); return; }
+    var lines = [title, t('reportWrittenOn') + fmtDate(new Date().toISOString()), ''.padEnd(40, '=')];
     ids.forEach(function (id) {
       var m = state.materials.find(function (x) { return x.id === id; });
       if (!m) return;
-      lines.push('', '[' + (m.category || '기타') + '] ' + m.title, ''.padEnd(30, '-'), (m.bodyIsHtml ? stripTags(m.body) : m.body) || '');
+      lines.push('', '[' + displayCategory(m.category || '기타') + '] ' + m.title, ''.padEnd(30, '-'), (m.bodyIsHtml ? stripTags(m.body) : m.body) || '');
     });
     if (includeNotes) {
-      lines.push('', '[노트]', ''.padEnd(30, '-'), el.notesArea.value || '(내용 없음)');
+      lines.push('', t('reportNoteHeading'), ''.padEnd(30, '-'), el.notesArea.value || t('reportNoContent'));
     }
     var content = lines.join('\n');
     var stamp = new Date().toISOString().slice(0, 10);
     var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    var safeTitle = title.replace(/[\\/:*?"<>|]/g, '').trim() || '보고서';
+    var safeTitle = title.replace(/[\\/:*?"<>|]/g, '').trim() || t('reportFallbackName');
     a.href = url; a.download = safeTitle + '_' + stamp + '.txt';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    showToast('보고서를 내보냈습니다');
+    showToast(t('reportExported'));
   });
 
   // ---- glossary ----
   function openGlossaryForm(g) {
     openForm({
-      title: g ? '용어 수정' : '새 용어 추가',
+      title: g ? t('glFormEdit') : t('glFormAdd'),
       fields: [
-        { id: 'f-gl-term-kr', label: '한글', value: g ? (g.term_kr != null ? g.term_kr : g.term) : '' },
-        { id: 'f-gl-term-en', label: '영문', value: g ? (g.term_en || '') : '' },
-        { id: 'f-gl-dept', label: '부서', value: g ? (g.department || '') : '', placeholder: '예: KPI, Quality, Material' },
-        { id: 'f-gl-def', label: '정의', type: 'textarea', value: g ? (g.definition || '') : '' },
-        { id: 'f-gl-calc', label: '산출법/계산식 (있는 경우)', value: g ? (g.calc || '') : '' },
-        { id: 'f-gl-important', label: '중요 용어로 표시 (색상 강조)', type: 'checkbox', checked: g ? !!g.important : false },
+        { id: 'f-gl-term-kr', label: t('fieldTermKr'), value: g ? (g.term_kr != null ? g.term_kr : g.term) : '' },
+        { id: 'f-gl-term-en', label: t('fieldTermEn'), value: g ? (g.term_en || '') : '' },
+        { id: 'f-gl-dept', label: t('fieldDept'), value: g ? (g.department || '') : '', placeholder: t('deptPh') },
+        { id: 'f-gl-def', label: t('fieldDef'), type: 'textarea', value: g ? (g.definition || '') : '' },
+        { id: 'f-gl-calc', label: t('fieldCalc'), value: g ? (g.calc || '') : '' },
+        { id: 'f-gl-important', label: t('fieldImportant'), type: 'checkbox', checked: g ? !!g.important : false },
       ],
-      onDelete: g ? function () { return db.collection('glossary').doc(g.id).delete(); } : null,
+      onDelete: (g && state.isOwner) ? function () { return db.collection('glossary').doc(g.id).delete(); } : null,
       onSave: function (v) {
-        if (!v['f-gl-term-kr'] && !v['f-gl-term-en']) { showToast('용어(한글 또는 영문)를 입력해주세요'); return false; }
+        if (!v['f-gl-term-kr'] && !v['f-gl-term-en']) { showToast(t('toastTermRequired')); return false; }
         var payload = {
           term_kr: v['f-gl-term-kr'], term_en: v['f-gl-term-en'], department: v['f-gl-dept'],
           definition: v['f-gl-def'], calc: v['f-gl-calc'], important: !!v['f-gl-important'],
         };
         if (g) return db.collection('glossary').doc(g.id).update(payload);
-        if (findDuplicateGlossary(payload.term_kr, payload.term_en, payload.definition)) { showToast('이미 저장된 용어입니다'); return false; }
+        if (findDuplicateGlossary(payload.term_kr, payload.term_en, payload.definition)) { showToast(t('toastDupGlossary')); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
         return db.collection('glossary').add(payload);
@@ -581,7 +695,7 @@
     });
   }
   function renderGlossary() {
-    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
+    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
     var q = state.glQuery.trim().toLowerCase();
     function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
     var filtered = state.glossary.filter(function (g) {
@@ -592,20 +706,21 @@
         (g.definition || '').toLowerCase().indexOf(q) !== -1;
     });
     el.glEmpty.hidden = filtered.length !== 0 || state.glossary.length !== 0;
+    el.glEmpty.textContent = t('glEmpty');
     if (!state.glossary.length) { el.glList.innerHTML = ''; return; }
-    if (!filtered.length) { el.glList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
+    if (!filtered.length) { el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('noResults')) + '</p>'; return; }
     filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (termKr(a) || '').localeCompare(termKr(b) || '', 'ko'); });
     el.glList.innerHTML = filtered.map(function (g) {
       return '<div class="gl-row' + (g.important ? ' important' : '') + '" data-id="' + g.id + '">' +
-        '<button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="중요 용어로 표시" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button>' +
+        '<button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="' + escapeHtml(t('fieldImportant')) + '" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button>' +
         '<button class="gl-term-btn" data-id="' + g.id + '">' +
         '<span class="gl-term-col">' +
-        '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">예시</span>' : '') + '</span>' +
+        '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
         (g.term_en ? '<span class="gl-term-en">' + escapeHtml(g.term_en) + '</span>' : '') +
         (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '') +
         '</span>' +
         '<span class="gl-def">' + escapeHtml(g.definition || '') +
-        (g.calc ? '<div class="gl-calc">산출법: ' + escapeHtml(g.calc) + '</div>' : '') +
+        (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '') +
         '</span>' +
         '</button></div>';
     }).join('');
@@ -625,18 +740,18 @@
   // ---- notes -> material ----
   function openSaveNoteAsMaterialForm() {
     var content = el.notesArea.value.trim();
-    if (!content) { el.notesStatus.textContent = '저장할 노트 내용이 없습니다'; return; }
+    if (!content) { el.notesStatus.textContent = t('toastNoNoteContent'); return; }
     openForm({
-      title: '노트를 학습자료로 저장',
+      title: t('smFormTitle'),
       fields: [
-        { id: 'f-sm-title', label: '제목', value: '' },
-        { id: 'f-sm-category', label: '카테고리', value: '내 노트', placeholder: '예: 내 노트' },
-        { id: 'f-sm-body', label: '내용', type: 'textarea', value: content },
-        { id: 'f-sm-clear', label: '저장 후 노트 비우기', type: 'checkbox', checked: false },
+        { id: 'f-sm-title', label: t('fieldTitle'), value: '' },
+        { id: 'f-sm-category', label: t('fieldCategory'), value: '내 노트', placeholder: t('catMyNotesPh') },
+        { id: 'f-sm-body', label: t('fieldContent'), type: 'textarea', value: content },
+        { id: 'f-sm-clear', label: t('fieldClearAfterSave'), type: 'checkbox', checked: false },
       ],
       onSave: function (v) {
-        if (!v['f-sm-title']) { showToast('제목을 입력해주세요'); return false; }
-        if (findDuplicateMaterial(v['f-sm-title'], v['f-sm-body'])) { showToast('이미 저장된 자료입니다'); return false; }
+        if (!v['f-sm-title']) { showToast(t('toastTitleRequired')); return false; }
+        if (findDuplicateMaterial(v['f-sm-title'], v['f-sm-body'])) { showToast(t('toastDupMaterial')); return false; }
         return db.collection('materials').add({ title: v['f-sm-title'], category: v['f-sm-category'] || '내 노트', body: v['f-sm-body'], addedAt: new Date().toISOString(), isExample: false })
           .then(function () {
             if (v['f-sm-clear']) { el.notesArea.value = ''; el.notesArea.dispatchEvent(new Event('input')); }
@@ -650,12 +765,12 @@
   // ---- notes ----
   var notesWriteTimer;
   el.notesArea.addEventListener('input', function () {
-    el.notesStatus.textContent = '저장 중…';
+    el.notesStatus.textContent = t('notesSaving');
     clearTimeout(notesWriteTimer);
     notesWriteTimer = setTimeout(function () {
       var content = el.notesArea.value;
       db.doc('notes/current').set({ content: content, updatedAt: new Date().toISOString() })
-        .then(function () { lastSyncedNotes = content; el.notesStatus.textContent = '저장됨 · ' + fmtTime(new Date().toISOString()); })
+        .then(function () { lastSyncedNotes = content; el.notesStatus.textContent = t('notesSaved') + fmtTime(new Date().toISOString()); })
         .catch(function (e) { el.notesStatus.textContent = errMsg(e); });
     }, 800);
   });
@@ -666,7 +781,7 @@
     var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    a.href = url; a.download = '노트_' + stamp + '.txt';
+    a.href = url; a.download = t('notesFilePrefix') + stamp + '.txt';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   });
@@ -709,7 +824,7 @@
       var content = data.content || '';
       if (document.activeElement !== el.notesArea && content !== lastSyncedNotes) {
         el.notesArea.value = content; lastSyncedNotes = content;
-        el.notesStatus.textContent = data.updatedAt ? '동기화됨 · ' + fmtTime(data.updatedAt) : '';
+        el.notesStatus.textContent = data.updatedAt ? t('notesSynced') + fmtTime(data.updatedAt) : '';
       }
     }, function (e) { el.notesStatus.textContent = errMsg(e); });
   }
@@ -721,8 +836,10 @@
 
   auth.onAuthStateChanged(function (user) {
     if (user) {
+      state.isOwner = user.uid === OWNER_UID;
       el.loginScreen.hidden = true;
       el.app.hidden = false;
+      applyLang();
       switchTab('materials');
       renderMaterials(); renderGlossary(); renderReportList();
       subscribe();
