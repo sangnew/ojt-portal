@@ -301,7 +301,9 @@
   el.tabs.forEach(function (btn) { btn.addEventListener('click', function () { switchTab(btn.dataset.tab); }); });
 
   function closeModal() { el.overlay.hidden = true; el.modalBody.innerHTML = ''; el.modal.classList.remove('modal-large'); }
-  el.overlay.addEventListener('click', function (e) { if (e.target === el.overlay) closeModal(); });
+  var overlayMousedownOnSelf = false;
+  el.overlay.addEventListener('mousedown', function (e) { overlayMousedownOnSelf = (e.target === el.overlay); });
+  el.overlay.addEventListener('click', function (e) { if (e.target === el.overlay && overlayMousedownOnSelf) closeModal(); overlayMousedownOnSelf = false; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !el.overlay.hidden) closeModal(); });
 
   function openForm(opts) {
