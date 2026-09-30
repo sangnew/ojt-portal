@@ -1,194 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>상구의 모비스 탐험기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
-
   :root {
-    --bg: #e4e1dc;
-    --bg-grid: #d8d4cd;
-    --plate: #f2f0eb;
-    --plate-edge: #c7c1b5;
-    --card: #ffffff;
-    --input-bg: #ffffff;
-    --ink: #221f1a;
-    --ink-muted: #6d675c;
-    --ink-faint: #a29b8d;
-    --accent: #b8650b;
-    --accent-ink: #fff8ef;
-    --led: #3f7d4e;
-    --rivet: #b9b3a8;
-    --readout-bg: #1e1b16;
-    --readout-ink: #f2c98a;
-    --danger: #9c3323;
-    --danger-ink: #fff3ee;
-    --shadow: rgba(34, 31, 26, 0.16);
-    --overlay: rgba(20, 18, 15, 0.5);
+    --bg: #e4e1dc; --bg-grid: #d8d4cd; --plate: #f2f0eb; --plate-edge: #c7c1b5;
+    --card: #ffffff; --input-bg: #ffffff; --ink: #221f1a; --ink-muted: #6d675c; --ink-faint: #a29b8d;
+    --accent: #b8650b; --accent-ink: #fff8ef; --led: #3f7d4e; --readout-bg: #1e1b16; --readout-ink: #f2c98a;
+    --danger: #9c3323; --danger-ink: #fff3ee; --shadow: rgba(34, 31, 26, 0.16); --overlay: rgba(20, 18, 15, 0.5);
   }
-
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #15171a;
-      --bg-grid: #1b1e22;
-      --plate: #1f2226;
-      --plate-edge: #34383c;
-      --card: #262a2e;
-      --input-bg: #181a1d;
-      --ink: #ece8e0;
-      --ink-muted: #9b968c;
-      --ink-faint: #6b6760;
-      --accent: #e2933a;
-      --accent-ink: #1c1206;
-      --led: #5fbe79;
-      --rivet: #43474c;
-      --readout-bg: #0e0d0b;
-      --readout-ink: #f4cd8f;
-      --danger: #e2735c;
-      --danger-ink: #2a0f08;
-      --shadow: rgba(0, 0, 0, 0.45);
-      --overlay: rgba(0, 0, 0, 0.6);
+      --bg: #15171a; --bg-grid: #1b1e22; --plate: #1f2226; --plate-edge: #34383c;
+      --card: #262a2e; --input-bg: #181a1d; --ink: #ece8e0; --ink-muted: #9b968c; --ink-faint: #6b6760;
+      --accent: #e2933a; --accent-ink: #1c1206; --led: #5fbe79; --readout-bg: #0e0d0b; --readout-ink: #f4cd8f;
+      --danger: #e2735c; --danger-ink: #2a0f08; --shadow: rgba(0, 0, 0, 0.45); --overlay: rgba(0, 0, 0, 0.6);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #15171a;
-    --bg-grid: #1b1e22;
-    --plate: #1f2226;
-    --plate-edge: #34383c;
-    --card: #262a2e;
-    --input-bg: #181a1d;
-    --ink: #ece8e0;
-    --ink-muted: #9b968c;
-    --ink-faint: #6b6760;
-    --accent: #e2933a;
-    --accent-ink: #1c1206;
-    --led: #5fbe79;
-    --rivet: #43474c;
-    --readout-bg: #0e0d0b;
-    --readout-ink: #f4cd8f;
-    --danger: #e2735c;
-    --danger-ink: #2a0f08;
-    --shadow: rgba(0, 0, 0, 0.45);
-    --overlay: rgba(0, 0, 0, 0.6);
+    --bg: #15171a; --bg-grid: #1b1e22; --plate: #1f2226; --plate-edge: #34383c;
+    --card: #262a2e; --input-bg: #181a1d; --ink: #ece8e0; --ink-muted: #9b968c; --ink-faint: #6b6760;
+    --accent: #e2933a; --accent-ink: #1c1206; --led: #5fbe79; --readout-bg: #0e0d0b; --readout-ink: #f4cd8f;
+    --danger: #e2735c; --danger-ink: #2a0f08; --shadow: rgba(0, 0, 0, 0.45); --overlay: rgba(0, 0, 0, 0.6);
   }
-
   * { box-sizing: border-box; }
-
+  html, body { margin: 0; padding: 0; }
   body {
-    background:
-      radial-gradient(circle at 1px 1px, var(--bg-grid) 1px, transparent 0) 0 0 / 22px 22px,
-      var(--bg);
-    color: var(--ink);
-    font-family: "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
-    min-height: 100vh;
-    padding-block: 28px 60px;
+    background: radial-gradient(circle at 1px 1px, var(--bg-grid) 1px, transparent 0) 0 0 / 22px 22px, var(--bg);
+    color: var(--ink); font-family: "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+    min-height: 100vh; padding-block: 28px 60px;
   }
-
-  .wrap {
-    max-width: 880px;
-    margin: 0 auto;
-    padding-inline: 20px;
-  }
-
-  header.top {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-  }
-  header.top h1 {
-    margin: 0;
-    font-size: clamp(22px, 4.5vw, 27px);
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    text-wrap: balance;
-  }
-  .eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-  }
-  .eyebrow .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--led);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--led) 20%, transparent);
-    flex: none;
-  }
-
-  .banner {
-    background: var(--card);
-    border: 1px solid var(--plate-edge);
-    border-left: 3px solid var(--danger);
-    border-radius: 6px;
-    padding: 12px 16px;
-    font-size: 13.5px;
-    color: var(--ink-muted);
-    margin-bottom: 18px;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--plate-edge);
-    margin-bottom: 22px;
-  }
-  .tab-btn {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 10px 6px 12px;
-    cursor: pointer;
-    margin-bottom: -1px;
-  }
-  .tab-btn[aria-selected="true"] {
-    color: var(--ink);
-    border-bottom-color: var(--accent);
-  }
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; }
+  header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  header.top h1 { margin: 0; font-size: clamp(22px, 4.5vw, 27px); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+  .eyebrow { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: var(--ink-muted); text-transform: uppercase; }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--led); box-shadow: 0 0 0 3px color-mix(in srgb, var(--led) 20%, transparent); flex: none; }
+  .signout-btn { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; color: var(--ink-muted); background: transparent; border: 1px solid var(--plate-edge); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  .signout-btn:hover { color: var(--ink); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--plate-edge); margin-bottom: 22px; }
+  .tab-btn { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); background: transparent; border: none; border-bottom: 2px solid transparent; padding: 10px 6px 12px; cursor: pointer; margin-bottom: -1px; }
+  .tab-btn[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
   .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  .panel-head {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-  }
-  .search {
-    flex: 1;
-    min-width: 160px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 13px;
-    background: var(--readout-bg);
-    color: var(--readout-ink);
-    border: none;
-    border-radius: 7px;
-    padding: 11px 14px;
-  }
+  .panel-head { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 160px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; background: var(--readout-bg); color: var(--readout-ink); border: none; border-radius: 7px; padding: 11px 14px; }
   .search::placeholder { color: color-mix(in srgb, var(--readout-ink) 55%, transparent); }
   .search:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  .btn {
-    font-family: "IBM Plex Sans KR", sans-serif;
-    font-size: 13.5px;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 16px;
-    cursor: pointer;
-    transition: filter 0.15s ease, transform 0.15s ease;
-  }
+  .btn { font-family: "IBM Plex Sans KR", sans-serif; font-size: 13.5px; font-weight: 600; border: none; border-radius: 6px; padding: 10px 16px; cursor: pointer; transition: filter 0.15s ease, transform 0.15s ease; }
   .btn:active { transform: translateY(1px); }
   .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .btn-accent { background: var(--accent); color: var(--accent-ink); }
@@ -198,230 +58,80 @@
   .btn-danger { background: var(--danger); color: var(--danger-ink); }
   .btn-danger:hover { filter: brightness(1.08); }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
-
-  .cat-label {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    margin: 22px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--plate-edge);
-  }
+  .cat-label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--plate-edge); }
   .cat-label:first-child { margin-top: 0; }
-
-  .mat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
-  }
-  .mat-card {
-    position: relative;
-    text-align: left;
-    background: var(--card);
-    border: 1px solid var(--plate-edge);
-    border-radius: 8px;
-    padding: 14px 16px 16px;
-    cursor: pointer;
-    font-family: inherit;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
+  .mat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .mat-card { position: relative; text-align: left; background: var(--card); border: 1px solid var(--plate-edge); border-radius: 8px; padding: 14px 16px 16px; cursor: pointer; font-family: inherit; color: inherit; display: flex; flex-direction: column; gap: 6px; }
   .mat-card:hover { border-color: var(--accent); }
   .mat-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .mat-card-title { font-weight: 600; font-size: 14.5px; text-wrap: balance; }
   .mat-card-snip { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
-  .badge {
-    align-self: flex-start;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 1px 8px;
-  }
-
+  .badge { align-self: flex-start; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; }
   .gl-list { display: flex; flex-direction: column; border-top: 1px solid var(--plate-edge); }
-  .gl-row {
-    display: flex;
-    gap: 16px;
-    align-items: baseline;
-    padding: 13px 0;
-    border-bottom: 1px solid var(--plate-edge);
-    cursor: pointer;
-    background: transparent;
-    border-left: none; border-right: none; border-top: none;
-    text-align: left;
-    font-family: inherit;
-    color: inherit;
-    width: 100%;
-  }
+  .gl-row { display: flex; gap: 16px; align-items: baseline; padding: 13px 0; border-bottom: 1px solid var(--plate-edge); cursor: pointer; background: transparent; border-left: none; border-right: none; border-top: none; text-align: left; font-family: inherit; color: inherit; width: 100%; }
   .gl-row:hover .gl-term { color: var(--accent); }
   .gl-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .gl-term {
-    flex: none;
-    width: 34%;
-    min-width: 110px;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-weight: 600;
-    font-size: 13.5px;
-  }
+  .gl-term { flex: none; width: 34%; min-width: 110px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13.5px; }
   .gl-def { flex: 1; font-size: 13.5px; color: var(--ink-muted); line-height: 1.5; }
-
-  .empty {
-    font-size: 13.5px;
-    color: var(--ink-faint);
-    padding: 30px 0;
-    text-align: center;
-  }
-
-  .notes-card {
-    background: var(--card);
-    border: 1px solid var(--plate-edge);
-    border-radius: 8px;
-    padding: 16px;
-  }
-  #notes-area {
-    width: 100%;
-    min-height: 280px;
-    resize: vertical;
-    background: var(--input-bg);
-    color: var(--ink);
-    border: 1px solid var(--plate-edge);
-    border-radius: 6px;
-    padding: 14px;
-    font-family: "IBM Plex Sans KR", sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-  }
+  .empty { font-size: 13.5px; color: var(--ink-faint); padding: 30px 0; text-align: center; }
+  .notes-card { background: var(--card); border: 1px solid var(--plate-edge); border-radius: 8px; padding: 16px; }
+  #notes-area { width: 100%; min-height: 280px; resize: vertical; background: var(--input-bg); color: var(--ink); border: 1px solid var(--plate-edge); border-radius: 6px; padding: 14px; font-family: "IBM Plex Sans KR", sans-serif; font-size: 14px; line-height: 1.6; }
   #notes-area:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .notes-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
-  #notes-status {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11.5px;
-    color: var(--ink-faint);
-  }
-  .notes-actions { display: flex; gap: 8px; }
-
-  .overlay {
-    position: fixed; inset: 0;
-    background: var(--overlay);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    z-index: 10;
-  }
-  .modal {
-    width: 100%;
-    max-width: 480px;
-    max-height: 86vh;
-    overflow-y: auto;
-    background: var(--plate);
-    border: 1px solid var(--plate-edge);
-    border-radius: 10px;
-    box-shadow: 0 24px 50px -20px var(--shadow);
-    padding: 22px 22px 20px;
-  }
-  .modal h2 {
-    margin: 0 0 16px;
-    font-size: 17px;
-    font-weight: 700;
-    text-wrap: balance;
-  }
-  .f-label {
-    display: block;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    margin: 14px 0 6px;
-  }
+  .notes-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  #notes-status { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; color: var(--ink-faint); }
+  .notes-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+  .modal { width: 100%; max-width: 480px; max-height: 86vh; overflow-y: auto; background: var(--plate); border: 1px solid var(--plate-edge); border-radius: 10px; box-shadow: 0 24px 50px -20px var(--shadow); padding: 22px 22px 20px; }
+  .modal h2 { margin: 0 0 16px; font-size: 17px; font-weight: 700; text-wrap: balance; }
+  .f-label { display: block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin: 14px 0 6px; }
   .f-label:first-child { margin-top: 0; }
-  .f-check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 16px 0 4px;
-    font-size: 13.5px;
-    color: var(--ink-muted);
-  }
-  .f-input {
-    width: 100%;
-    background: var(--input-bg);
-    color: var(--ink);
-    border: 1px solid var(--plate-edge);
-    border-radius: 6px;
-    padding: 9px 11px;
-    font-family: "IBM Plex Sans KR", sans-serif;
-    font-size: 14px;
-  }
+  .f-input { width: 100%; background: var(--input-bg); color: var(--ink); border: 1px solid var(--plate-edge); border-radius: 6px; padding: 9px 11px; font-family: "IBM Plex Sans KR", sans-serif; font-size: 14px; }
   .f-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .f-textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
-  .f-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 20px;
-  }
+  .f-check { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; font-size: 13.5px; color: var(--ink-muted); }
+  .f-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; }
   .f-actions-right { display: flex; gap: 8px; }
-  .detail-meta {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 11.5px;
-    color: var(--ink-faint);
-    margin: 0 0 14px;
-  }
+  .detail-meta { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; color: var(--ink-faint); margin: 0 0 14px; }
   .detail-body { font-size: 14.5px; line-height: 1.7; margin: 0; }
-
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 28px;
-    transform: translate(-50%, 12px);
-    background: var(--ink);
-    color: var(--plate);
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 10px 18px;
-    border-radius: 999px;
-    max-width: calc(100% - 40px);
-    text-align: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.18s ease;
-    z-index: 20;
-  }
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); background: var(--ink); color: var(--plate); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; padding: 10px 18px; border-radius: 999px; max-width: calc(100% - 40px); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease; z-index: 20; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
-</style>
 
-<div class="wrap">
+  /* login screen */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-card { width: 100%; max-width: 360px; background: var(--plate); border: 1px solid var(--plate-edge); border-radius: 10px; box-shadow: 0 18px 40px -18px var(--shadow); padding: 30px 26px; }
+  .login-card h1 { font-size: 20px; margin: 0 0 4px; }
+  .login-card p.sub { margin: 0 0 22px; font-size: 13px; color: var(--ink-muted); }
+  .login-error { font-size: 12.5px; color: var(--danger); margin: 10px 0 0; min-height: 16px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <p class="eyebrow"><span class="dot"></span>LOGIN</p>
+    <h1>상구의 모비스 탐험기</h1>
+    <p class="sub">등록된 계정으로 로그인하세요</p>
+    <label class="f-label" for="login-email">이메일</label>
+    <input class="f-input" id="login-email" type="email" autocomplete="username">
+    <label class="f-label" for="login-pw">비밀번호</label>
+    <input class="f-input" id="login-pw" type="password" autocomplete="current-password">
+    <p class="login-error" id="login-error"></p>
+    <div class="f-actions" style="justify-content:flex-end; margin-top:18px;">
+      <button class="btn btn-accent" id="login-btn" type="button">로그인</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="wrap" hidden>
   <header class="top">
     <div>
       <p class="eyebrow"><span class="dot"></span>내가 채우는 학습 포털</p>
       <h1>상구의 모비스 탐험기</h1>
     </div>
+    <button class="signout-btn" id="signout-btn" type="button">로그아웃</button>
   </header>
-
-  <div class="banner" id="signin-banner" hidden>
-    claude.ai에 로그인한 상태로 열어야 자료·용어집·노트가 저장되고 기기 간에 동기화됩니다.
-  </div>
 
   <nav class="tabs" role="tablist">
     <button class="tab-btn" data-tab="materials" role="tab" aria-selected="true">학습자료</button>
@@ -471,26 +181,39 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 (function () {
   'use strict';
 
-  var dbApi = null, userApi = null, downloadsApi = null;
-  var state = {
-    materials: [], glossary: [], matQuery: '', glQuery: '',
-    materialsLoaded: false, materialsError: null,
-    glossaryLoaded: false, glossaryError: null,
+  var firebaseConfig = {
+    apiKey: "AIzaSyBsQ9m0ZuyPs8CHhlkgPfZIfVtgL_G7kBk",
+    authDomain: "car-smart-fce3e.firebaseapp.com",
+    projectId: "car-smart-fce3e",
+    storageBucket: "car-smart-fce3e.firebasestorage.app",
+    messagingSenderId: "964219568414",
+    appId: "1:964219568414:web:c37bfc6fbb6ce2c7b3090f"
   };
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', materialsLoaded: false, glossaryLoaded: false };
   var lastSyncedNotes = '';
+  var unsubMaterials, unsubGlossary, unsubNotes;
 
   var el = {
+    loginScreen: document.getElementById('login-screen'),
+    loginEmail: document.getElementById('login-email'),
+    loginPw: document.getElementById('login-pw'),
+    loginBtn: document.getElementById('login-btn'),
+    loginError: document.getElementById('login-error'),
+    app: document.getElementById('app'),
+    signoutBtn: document.getElementById('signout-btn'),
     tabs: document.querySelectorAll('.tab-btn'),
-    panels: {
-      materials: document.getElementById('panel-materials'),
-      glossary: document.getElementById('panel-glossary'),
-      notes: document.getElementById('panel-notes'),
-    },
-    banner: document.getElementById('signin-banner'),
+    panels: { materials: document.getElementById('panel-materials'), glossary: document.getElementById('panel-glossary'), notes: document.getElementById('panel-notes') },
     matList: document.getElementById('mat-list'),
     matEmpty: document.getElementById('mat-empty'),
     matSearch: document.getElementById('mat-search'),
@@ -510,6 +233,19 @@
     toast: document.getElementById('toast'),
   };
 
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmtDate(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return ''; } }
+  function fmtTime(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  function norm(s) { return String(s || '').trim().replace(/\s+/g, ' '); }
+  function findDuplicateMaterial(title, body, excludeId) {
+    var t = norm(title), b = norm(body);
+    return state.materials.find(function (m) { return m.id !== excludeId && norm(m.title) === t && norm(m.body) === b; });
+  }
+  function findDuplicateGlossary(term, definition, excludeId) {
+    var t = norm(term), d = norm(definition);
+    return state.glossary.find(function (g) { return g.id !== excludeId && norm(g.term) === t && norm(g.definition) === d; });
+  }
+
   var toastTimer;
   function showToast(msg) {
     el.toast.textContent = msg;
@@ -518,55 +254,22 @@
     toastTimer = setTimeout(function () { el.toast.classList.remove('show'); }, 2400);
   }
   function errMsg(e) {
-    if (e && e.code === 'not_granted') return '로그인이 필요합니다';
-    if (e && e.code === 'revoked') return '접근 권한이 없습니다';
-    if (e && e.code) return '저장 실패 (' + e.code + ')';
-    return '저장 실패 — 다시 시도해주세요';
+    if (e && e.code === 'permission-denied') return '권한이 없습니다';
+    if (e && e.code) return '오류 (' + e.code + ')';
+    return '오류가 발생했습니다';
   }
 
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-  function fmtDate(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
-    catch (e) { return ''; }
-  }
-  function fmtTime(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); }
-    catch (e) { return ''; }
-  }
-  function norm(s) { return String(s || '').trim().replace(/\s+/g, ' '); }
-  function findDuplicateMaterial(title, body, excludeId) {
-    var t = norm(title), b = norm(body);
-    return state.materials.find(function (m) {
-      return m.id !== excludeId && norm(m.title) === t && norm(m.body) === b;
-    });
-  }
-  function findDuplicateGlossary(term, definition, excludeId) {
-    var t = norm(term), d = norm(definition);
-    return state.glossary.find(function (g) {
-      return g.id !== excludeId && norm(g.term) === t && norm(g.definition) === d;
-    });
-  }
-
-  // ---- tabs ----
   function switchTab(name) {
     Object.keys(el.panels).forEach(function (k) { el.panels[k].hidden = (k !== name); });
     el.tabs.forEach(function (btn) { btn.setAttribute('aria-selected', btn.dataset.tab === name ? 'true' : 'false'); });
   }
   el.tabs.forEach(function (btn) { btn.addEventListener('click', function () { switchTab(btn.dataset.tab); }); });
 
-  // ---- modal ----
   function closeModal() { el.overlay.hidden = true; el.modalBody.innerHTML = ''; }
   el.overlay.addEventListener('click', function (e) { if (e.target === el.overlay) closeModal(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !el.overlay.hidden) closeModal(); });
 
   function openForm(opts) {
-    // opts: {title, fields: [{id,label,type,value,placeholder}], onSave(values), onDelete}
     el.modalTitle.textContent = opts.title;
     var html = '';
     opts.fields.forEach(function (f) {
@@ -583,10 +286,7 @@
     });
     html += '<div class="f-actions">' +
       (opts.onDelete ? '<button type="button" class="btn btn-danger" id="f-delete">삭제</button>' : '<span></span>') +
-      '<div class="f-actions-right">' +
-      '<button type="button" class="btn btn-ghost" id="f-cancel">취소</button>' +
-      '<button type="button" class="btn btn-accent" id="f-save">저장</button>' +
-      '</div></div>';
+      '<div class="f-actions-right"><button type="button" class="btn btn-ghost" id="f-cancel">취소</button><button type="button" class="btn btn-accent" id="f-save">저장</button></div></div>';
     el.modalBody.innerHTML = html;
     el.overlay.hidden = false;
     var first = document.getElementById(opts.fields[0].id);
@@ -596,46 +296,31 @@
       document.getElementById('f-delete').addEventListener('click', function () {
         var delBtn = document.getElementById('f-delete');
         delBtn.disabled = true;
-        Promise.resolve(opts.onDelete()).then(function () {
-          closeModal();
-          showToast('삭제되었습니다');
-        }).catch(function (e) {
-          delBtn.disabled = false;
-          showToast(errMsg(e));
-        });
+        Promise.resolve(opts.onDelete()).then(function () { closeModal(); showToast('삭제되었습니다'); })
+          .catch(function (e) { delBtn.disabled = false; showToast(errMsg(e)); });
       });
     }
     document.getElementById('f-save').addEventListener('click', function () {
       var values = {};
-      opts.fields.forEach(function (f) {
-        var elm = document.getElementById(f.id);
-        values[f.id] = (f.type === 'checkbox') ? elm.checked : elm.value.trim();
-      });
+      opts.fields.forEach(function (f) { var elm = document.getElementById(f.id); values[f.id] = (f.type === 'checkbox') ? elm.checked : elm.value.trim(); });
       var saveBtn = document.getElementById('f-save');
       var result = opts.onSave(values);
       if (result === false) return;
       saveBtn.disabled = true;
       Promise.resolve(result).then(function (ok) {
         if (ok === false) { saveBtn.disabled = false; return; }
-        closeModal();
-        showToast('저장되었습니다');
-      }).catch(function (e) {
-        saveBtn.disabled = false;
-        showToast(errMsg(e));
-      });
+        closeModal(); showToast('저장되었습니다');
+      }).catch(function (e) { saveBtn.disabled = false; showToast(errMsg(e)); });
     });
   }
 
   function openDetail(opts) {
-    // opts: {title, meta, body, onEdit}
     el.modalTitle.textContent = opts.title;
-    el.modalBody.innerHTML =
-      '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
+    el.modalBody.innerHTML = '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
       '<p class="detail-body">' + escapeHtml(opts.body).replace(/\n/g, '<br>') + '</p>' +
       '<div class="f-actions"><span></span><div class="f-actions-right">' +
       '<button type="button" class="btn btn-ghost" id="f-close">닫기</button>' +
-      '<button type="button" class="btn btn-accent" id="f-edit">수정</button>' +
-      '</div></div>';
+      '<button type="button" class="btn btn-accent" id="f-edit">수정</button></div></div>';
     el.overlay.hidden = false;
     document.getElementById('f-close').addEventListener('click', closeModal);
     document.getElementById('f-edit').addEventListener('click', function () { closeModal(); opts.onEdit(); });
@@ -650,24 +335,15 @@
         { id: 'f-mat-category', label: '카테고리', value: m ? m.category : '', placeholder: '예: 품질, 공정관리, 용접' },
         { id: 'f-mat-body', label: '내용', type: 'textarea', value: m ? m.body : '' },
       ],
-      onDelete: m ? function () {
-        if (!dbApi) return Promise.reject({ code: 'not_granted' });
-        return dbApi.collection('materials').doc(m.id).delete();
-      } : null,
+      onDelete: m ? function () { return db.collection('materials').doc(m.id).delete(); } : null,
       onSave: function (v) {
         if (!v['f-mat-title']) { showToast('제목을 입력해주세요'); return false; }
-        if (!dbApi) return Promise.reject({ code: 'not_granted' });
         var payload = { title: v['f-mat-title'], category: v['f-mat-category'] || '기타', body: v['f-mat-body'] };
-        if (m) {
-          return dbApi.collection('materials').doc(m.id).update(payload);
-        }
-        if (findDuplicateMaterial(payload.title, payload.body)) {
-          showToast('이미 저장된 자료입니다');
-          return false;
-        }
+        if (m) return db.collection('materials').doc(m.id).update(payload);
+        if (findDuplicateMaterial(payload.title, payload.body)) { showToast('이미 저장된 자료입니다'); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
-        return dbApi.collection('materials').add(payload);
+        return db.collection('materials').add(payload);
       },
     });
   }
@@ -680,51 +356,33 @@
     });
   }
   function renderMaterials() {
-    if (state.materialsError) {
-      el.matEmpty.hidden = true;
-      el.matList.innerHTML = '<p class="empty">자료를 불러오지 못했습니다 (' + escapeHtml(state.materialsError.code || 'unknown') + '). 새로고침해보세요.</p>';
-      return;
-    }
-    if (!state.materialsLoaded) {
-      el.matEmpty.hidden = true;
-      el.matList.innerHTML = '<p class="empty">불러오는 중…</p>';
-      return;
-    }
+    if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
     try {
-    var q = state.matQuery.trim().toLowerCase();
-    var filtered = state.materials.filter(function (m) {
-      if (!q) return true;
-      return (m.title || '').toLowerCase().indexOf(q) !== -1 ||
-        (m.body || '').toLowerCase().indexOf(q) !== -1 ||
-        (m.category || '').toLowerCase().indexOf(q) !== -1;
-    });
-    el.matEmpty.hidden = filtered.length !== 0 || state.materials.length !== 0;
-    if (!state.materials.length) { el.matList.innerHTML = ''; return; }
-    if (!filtered.length) { el.matList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
-    var groups = {};
-    filtered.forEach(function (m) { var c = m.category || '기타'; (groups[c] = groups[c] || []).push(m); });
-    var cats = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'ko'); });
-    var html = '';
-    cats.forEach(function (cat) {
-      html += '<div class="cat-label">' + escapeHtml(cat) + '</div><div class="mat-grid">';
-      groups[cat]
-        .sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); })
-        .forEach(function (m) {
-          html += '<button class="mat-card" data-id="' + m.id + '">' +
-            (m.isExample ? '<span class="badge">예시</span>' : '') +
-            '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
-            '<span class="mat-card-snip">' + escapeHtml((m.body || '').slice(0, 72)) + ((m.body || '').length > 72 ? '…' : '') + '</span>' +
-            '</button>';
-        });
-      html += '</div>';
-    });
-    el.matList.innerHTML = html;
-    el.matList.querySelectorAll('.mat-card').forEach(function (card) {
-      card.addEventListener('click', function () {
-        var m = state.materials.find(function (x) { return x.id === card.dataset.id; });
-        if (m) openMaterialDetail(m);
+      var q = state.matQuery.trim().toLowerCase();
+      var filtered = state.materials.filter(function (m) {
+        if (!q) return true;
+        return (m.title || '').toLowerCase().indexOf(q) !== -1 || (m.body || '').toLowerCase().indexOf(q) !== -1 || (m.category || '').toLowerCase().indexOf(q) !== -1;
       });
-    });
+      el.matEmpty.hidden = filtered.length !== 0 || state.materials.length !== 0;
+      if (!state.materials.length) { el.matList.innerHTML = ''; return; }
+      if (!filtered.length) { el.matList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
+      var groups = {};
+      filtered.forEach(function (m) { var c = m.category || '기타'; (groups[c] = groups[c] || []).push(m); });
+      var cats = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, 'ko'); });
+      var html = '';
+      cats.forEach(function (cat) {
+        html += '<div class="cat-label">' + escapeHtml(cat) + '</div><div class="mat-grid">';
+        groups[cat].sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); }).forEach(function (m) {
+          html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">예시</span>' : '') +
+            '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
+            '<span class="mat-card-snip">' + escapeHtml((m.body || '').slice(0, 72)) + ((m.body || '').length > 72 ? '…' : '') + '</span></button>';
+        });
+        html += '</div>';
+      });
+      el.matList.innerHTML = html;
+      el.matList.querySelectorAll('.mat-card').forEach(function (card) {
+        card.addEventListener('click', function () { var m = state.materials.find(function (x) { return x.id === card.dataset.id; }); if (m) openMaterialDetail(m); });
+      });
     } catch (e) {
       el.matEmpty.hidden = true;
       el.matList.innerHTML = '<p class="empty">화면 렌더링 오류: ' + escapeHtml(e && e.message ? e.message : String(e)) + '</p>';
@@ -739,59 +397,30 @@
         { id: 'f-gl-term', label: '용어', value: g ? g.term : '' },
         { id: 'f-gl-def', label: '정의', type: 'textarea', value: g ? g.definition : '' },
       ],
-      onDelete: g ? function () {
-        if (!dbApi) return Promise.reject({ code: 'not_granted' });
-        return dbApi.collection('glossary').doc(g.id).delete();
-      } : null,
+      onDelete: g ? function () { return db.collection('glossary').doc(g.id).delete(); } : null,
       onSave: function (v) {
         if (!v['f-gl-term']) { showToast('용어를 입력해주세요'); return false; }
-        if (!dbApi) return Promise.reject({ code: 'not_granted' });
         var payload = { term: v['f-gl-term'], definition: v['f-gl-def'] };
-        if (g) {
-          return dbApi.collection('glossary').doc(g.id).update(payload);
-        }
-        if (findDuplicateGlossary(payload.term, payload.definition)) {
-          showToast('이미 저장된 용어입니다');
-          return false;
-        }
+        if (g) return db.collection('glossary').doc(g.id).update(payload);
+        if (findDuplicateGlossary(payload.term, payload.definition)) { showToast('이미 저장된 용어입니다'); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
-        return dbApi.collection('glossary').add(payload);
+        return db.collection('glossary').add(payload);
       },
     });
   }
   function renderGlossary() {
-    if (state.glossaryError) {
-      el.glEmpty.hidden = true;
-      el.glList.innerHTML = '<p class="empty">용어를 불러오지 못했습니다 (' + escapeHtml(state.glossaryError.code || 'unknown') + '). 새로고침해보세요.</p>';
-      return;
-    }
-    if (!state.glossaryLoaded) {
-      el.glEmpty.hidden = true;
-      el.glList.innerHTML = '<p class="empty">불러오는 중…</p>';
-      return;
-    }
+    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
     var q = state.glQuery.trim().toLowerCase();
-    var filtered = state.glossary.filter(function (g) {
-      if (!q) return true;
-      return (g.term || '').toLowerCase().indexOf(q) !== -1 || (g.definition || '').toLowerCase().indexOf(q) !== -1;
-    });
+    var filtered = state.glossary.filter(function (g) { if (!q) return true; return (g.term || '').toLowerCase().indexOf(q) !== -1 || (g.definition || '').toLowerCase().indexOf(q) !== -1; });
     el.glEmpty.hidden = filtered.length !== 0 || state.glossary.length !== 0;
     if (!state.glossary.length) { el.glList.innerHTML = ''; return; }
     if (!filtered.length) { el.glList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
     filtered.sort(function (a, b) { return (a.term || '').localeCompare(b.term || '', 'ko'); });
     el.glList.innerHTML = filtered.map(function (g) {
-      return '<button class="gl-row" data-id="' + g.id + '">' +
-        '<span class="gl-term">' + escapeHtml(g.term) + (g.isExample ? ' <span class="badge">예시</span>' : '') + '</span>' +
-        '<span class="gl-def">' + escapeHtml(g.definition || '') + '</span>' +
-        '</button>';
+      return '<button class="gl-row" data-id="' + g.id + '"><span class="gl-term">' + escapeHtml(g.term) + (g.isExample ? ' <span class="badge">예시</span>' : '') + '</span><span class="gl-def">' + escapeHtml(g.definition || '') + '</span></button>';
     }).join('');
-    el.glList.querySelectorAll('.gl-row').forEach(function (row) {
-      row.addEventListener('click', function () {
-        var g = state.glossary.find(function (x) { return x.id === row.dataset.id; });
-        if (g) openGlossaryForm(g);
-      });
-    });
+    el.glList.querySelectorAll('.gl-row').forEach(function (row) { row.addEventListener('click', function () { var g = state.glossary.find(function (x) { return x.id === row.dataset.id; }); if (g) openGlossaryForm(g); }); });
   }
 
   // ---- notes -> material ----
@@ -808,24 +437,12 @@
       ],
       onSave: function (v) {
         if (!v['f-sm-title']) { showToast('제목을 입력해주세요'); return false; }
-        if (!dbApi) return Promise.reject({ code: 'not_granted' });
-        if (findDuplicateMaterial(v['f-sm-title'], v['f-sm-body'])) {
-          showToast('이미 저장된 자료입니다');
-          return false;
-        }
-        return dbApi.collection('materials').add({
-          title: v['f-sm-title'],
-          category: v['f-sm-category'] || '내 노트',
-          body: v['f-sm-body'],
-          addedAt: new Date().toISOString(),
-          isExample: false,
-        }).then(function () {
-          if (v['f-sm-clear']) {
-            el.notesArea.value = '';
-            el.notesArea.dispatchEvent(new Event('input'));
-          }
-          switchTab('materials');
-        });
+        if (findDuplicateMaterial(v['f-sm-title'], v['f-sm-body'])) { showToast('이미 저장된 자료입니다'); return false; }
+        return db.collection('materials').add({ title: v['f-sm-title'], category: v['f-sm-category'] || '내 노트', body: v['f-sm-body'], addedAt: new Date().toISOString(), isExample: false })
+          .then(function () {
+            if (v['f-sm-clear']) { el.notesArea.value = ''; el.notesArea.dispatchEvent(new Event('input')); }
+            switchTab('materials');
+          });
       },
     });
   }
@@ -837,25 +454,22 @@
     el.notesStatus.textContent = '저장 중…';
     clearTimeout(notesWriteTimer);
     notesWriteTimer = setTimeout(function () {
-      if (!dbApi) return;
       var content = el.notesArea.value;
-      dbApi.doc('notes/current').set({ content: content, updatedAt: new Date().toISOString() })
-        .then(function () {
-          lastSyncedNotes = content;
-          el.notesStatus.textContent = '저장됨 · ' + fmtTime(new Date().toISOString());
-        })
+      db.doc('notes/current').set({ content: content, updatedAt: new Date().toISOString() })
+        .then(function () { lastSyncedNotes = content; el.notesStatus.textContent = '저장됨 · ' + fmtTime(new Date().toISOString()); })
         .catch(function (e) { el.notesStatus.textContent = errMsg(e); });
     }, 800);
   });
-  el.notesClearBtn.addEventListener('click', function () {
-    el.notesArea.value = '';
-    el.notesArea.dispatchEvent(new Event('input'));
-  });
+  el.notesClearBtn.addEventListener('click', function () { el.notesArea.value = ''; el.notesArea.dispatchEvent(new Event('input')); });
   el.notesExportBtn.addEventListener('click', function () {
-    if (!downloadsApi) { el.notesStatus.textContent = '내보내기를 사용할 수 없습니다'; return; }
     var content = el.notesArea.value || ' ';
     var stamp = new Date().toISOString().slice(0, 10);
-    downloadsApi.save({ filename: '노트_' + stamp + '.txt', data: content }).catch(function () {});
+    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = '노트_' + stamp + '.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   });
 
   el.matSearch.addEventListener('input', function () { state.matQuery = el.matSearch.value; renderMaterials(); });
@@ -863,83 +477,63 @@
   el.matAddBtn.addEventListener('click', function () { openMaterialForm(null); });
   el.glAddBtn.addEventListener('click', function () { openGlossaryForm(null); });
 
-  // ---- boot ----
-  var bootStage = 'start';
-  setTimeout(function () {
-    if (!state.materialsLoaded && !state.materialsError) {
-      el.matList.innerHTML = '<p class="empty">불러오는 중… (지연 — 단계: ' + escapeHtml(bootStage) + ', dbApi: ' + (dbApi ? '있음' : '없음') + ')</p>';
-    }
-  }, 6000);
+  // ---- auth ----
+  el.loginBtn.addEventListener('click', function () {
+    el.loginError.textContent = '';
+    var email = el.loginEmail.value.trim();
+    var pw = el.loginPw.value;
+    if (!email || !pw) { el.loginError.textContent = '이메일과 비밀번호를 입력해주세요.'; return; }
+    el.loginBtn.disabled = true;
+    auth.signInWithEmailAndPassword(email, pw).catch(function (e) {
+      el.loginError.textContent = '로그인 실패: 이메일 또는 비밀번호를 확인해주세요.';
+    }).finally(function () { el.loginBtn.disabled = false; });
+  });
+  el.loginPw.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.loginBtn.click(); });
+  el.signoutBtn.addEventListener('click', function () { auth.signOut(); });
 
-  async function boot() {
-    try {
-      bootStage = 'checking window.claude';
-      var claude = window.claude;
-      if (!claude || !claude.use) {
-        bootStage = 'no window.claude';
-        el.banner.hidden = false;
-        el.banner.textContent = 'window.claude를 찾을 수 없습니다. 이 화면에서는 claude.ai 연동 기능을 쓸 수 없습니다.';
-        return;
-      }
-      bootStage = 'awaiting claude.use(db/user/downloads)';
-      var results = await Promise.all([claude.use('db'), claude.use('user'), claude.use('downloads')]);
-      dbApi = results[0]; userApi = results[1]; downloadsApi = results[2];
-      bootStage = 'resolved: db=' + (dbApi ? 'ok' : 'null') + ' user=' + (userApi ? 'ok' : 'null') + ' downloads=' + (downloadsApi ? 'ok' : 'null');
-      if (!dbApi) {
-        el.banner.hidden = false;
-        el.banner.textContent = 'claude.ai에 로그인한 상태로 열어야 저장/동기화가 됩니다. (db 권한 없음)';
-        return;
-      }
-      el.banner.hidden = true;
-      bootStage = 'subscribing to collections';
-    } catch (e) {
-      bootStage = 'error: ' + (e && e.message ? e.message : String(e));
-      el.banner.hidden = false;
-      el.banner.textContent = '초기화 중 오류가 발생했습니다: ' + bootStage;
-      return;
-    }
-
-    dbApi.collection('materials').onSnapshot(function (snap) {
-      bootStage = 'materials snapshot received (' + snap.docs.length + ' docs, fromCache=' + snap.metadata.fromCache + ')';
+  function subscribe() {
+    unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
       state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.materialsLoaded = true;
-      state.materialsError = null;
       renderMaterials();
-    }, function (e) {
-      bootStage = 'materials snapshot error: ' + (e && e.code);
-      state.materialsError = e;
-      renderMaterials();
-    });
-    bootStage = 'materials subscribed, registering glossary';
+    }, function (e) { showToast(errMsg(e)); });
 
-    dbApi.collection('glossary').onSnapshot(function (snap) {
+    unsubGlossary = db.collection('glossary').onSnapshot(function (snap) {
       state.glossary = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.glossaryLoaded = true;
-      state.glossaryError = null;
       renderGlossary();
-    }, function (e) {
-      state.glossaryError = e;
-      renderGlossary();
-    });
-    bootStage = 'glossary subscribed, registering notes';
+    }, function (e) { showToast(errMsg(e)); });
 
-    dbApi.doc('notes/current').onSnapshot(function (snap) {
+    unsubNotes = db.doc('notes/current').onSnapshot(function (snap) {
       var data = snap.data() || {};
       var content = data.content || '';
       if (document.activeElement !== el.notesArea && content !== lastSyncedNotes) {
-        el.notesArea.value = content;
-        lastSyncedNotes = content;
+        el.notesArea.value = content; lastSyncedNotes = content;
         el.notesStatus.textContent = data.updatedAt ? '동기화됨 · ' + fmtTime(data.updatedAt) : '';
       }
-    }, function (e) {
-      el.notesStatus.textContent = '동기화 실패 (' + (e && e.code ? e.code : 'unknown') + ')';
-    });
-    bootStage = 'all subscribed, awaiting first snapshot';
+    }, function (e) { el.notesStatus.textContent = errMsg(e); });
+  }
+  function unsubscribeAll() {
+    if (unsubMaterials) unsubMaterials();
+    if (unsubGlossary) unsubGlossary();
+    if (unsubNotes) unsubNotes();
   }
 
-  switchTab('materials');
-  renderMaterials();
-  renderGlossary();
-  boot();
+  auth.onAuthStateChanged(function (user) {
+    if (user) {
+      el.loginScreen.hidden = true;
+      el.app.hidden = false;
+      switchTab('materials');
+      renderMaterials(); renderGlossary();
+      subscribe();
+    } else {
+      unsubscribeAll();
+      el.app.hidden = true;
+      el.loginScreen.hidden = false;
+      el.loginPw.value = '';
+    }
+  });
 })();
 </script>
+</body>
+</html>
