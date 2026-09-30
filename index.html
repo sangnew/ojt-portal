@@ -71,15 +71,15 @@
   .gl-list-lang { margin: -6px 0 10px; }
   .gl-list { display: flex; flex-direction: column; border-top: 1px solid var(--plate-edge); }
   .gl-table-wrap { overflow-x: auto; margin-top: 6px; }
-  .glossary-table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13px; }
-  .glossary-table th, .glossary-table td { border: 1px solid var(--plate-edge); padding: 8px 10px; text-align: left; vertical-align: top; }
-  .glossary-table th { background: var(--plate); font-weight: 600; white-space: nowrap; }
+  .glossary-table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13px; table-layout: fixed; }
+  .glossary-table th, .glossary-table td { border: 1px solid var(--plate-edge); padding: 8px 10px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
+  .glossary-table th { background: var(--plate); font-weight: 600; }
   .glossary-table tr.important td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-  .gl-star-cell { width: 1%; white-space: nowrap; text-align: center; }
-  .gl-term-kr-cell { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; white-space: nowrap; cursor: pointer; }
-  .gl-term-en-cell { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--ink-muted); white-space: nowrap; cursor: pointer; }
-  .gl-dept-cell { color: var(--ink-muted); white-space: nowrap; cursor: pointer; }
-  .gl-def-cell { cursor: pointer; line-height: 1.5; }
+  .gl-star-cell { width: 32px; text-align: center; }
+  .gl-term-kr-cell { width: 13%; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; cursor: pointer; }
+  .gl-term-en-cell { width: 15%; font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--ink-muted); cursor: pointer; }
+  .gl-dept-cell { width: 9%; color: var(--ink-muted); cursor: pointer; }
+  .gl-def-cell { width: auto; cursor: pointer; line-height: 1.5; }
   .gl-row-click:hover { background: var(--plate); }
   .gl-calc { margin-top: 3px; font-size: 11.5px; color: var(--ink-faint); }
   .gl-star-btn { background: none; border: none; cursor: pointer; font-size: 15px; line-height: 1; padding: 2px; color: var(--ink-faint); }
@@ -728,9 +728,9 @@
   function renderGlossary() {
     el.glListLangBtn.textContent = state.glListLang === 'en' ? '← 한글 목록' : 'English list →';
     var isEn = state.glListLang === 'en';
-    el.glThead.innerHTML = '<th></th>' + (isEn
-      ? '<th>' + escapeHtml(t('colEn')) + '</th><th>' + escapeHtml(t('colDept')) + '</th><th>' + escapeHtml(t('colDef')) + '</th>'
-      : '<th>' + escapeHtml(t('colKr')) + '</th><th>' + escapeHtml(t('colEn')) + '</th><th>' + escapeHtml(t('colDept')) + '</th><th>' + escapeHtml(t('colDef')) + '</th>');
+    el.glThead.innerHTML = '<th class="gl-star-cell"></th>' + (isEn
+      ? '<th class="gl-term-en-cell">' + escapeHtml(t('colEn')) + '</th><th class="gl-dept-cell">' + escapeHtml(t('colDept')) + '</th><th class="gl-def-cell">' + escapeHtml(t('colDef')) + '</th>'
+      : '<th class="gl-term-kr-cell">' + escapeHtml(t('colKr')) + '</th><th class="gl-term-en-cell">' + escapeHtml(t('colEn')) + '</th><th class="gl-dept-cell">' + escapeHtml(t('colDept')) + '</th><th class="gl-def-cell">' + escapeHtml(t('colDef')) + '</th>');
     if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<tr><td colspan="5" class="empty">' + escapeHtml(t('loading')) + '</td></tr>'; return; }
     var q = state.glQuery.trim().toLowerCase();
     function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
