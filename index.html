@@ -70,19 +70,19 @@
   .link-btn { background: none; border: none; padding: 0; color: var(--accent); font-size: 12.5px; cursor: pointer; text-decoration: underline; font-family: inherit; }
   .gl-list-lang { margin: -6px 0 10px; }
   .gl-list { display: flex; flex-direction: column; border-top: 1px solid var(--plate-edge); }
-  .gl-row { display: flex; align-items: baseline; gap: 4px; padding: 5px 10px; margin-inline: -10px; border-bottom: 1px solid var(--plate-edge); border-radius: 6px; }
-  .gl-row.important { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  .gl-row.important .gl-term { color: var(--accent); }
-  .gl-term-btn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; flex: 1; min-width: 0; padding: 8px 0; cursor: pointer; background: transparent; border: none; text-align: left; font-family: inherit; color: inherit; }
-  .gl-term-btn:hover .gl-term { color: var(--accent); }
-  .gl-term-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .gl-term-col { flex: none; width: 34%; min-width: 110px; }
-  .gl-term { display: block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13.5px; }
-  .gl-term-en { display: block; font-size: 12px; color: var(--ink-faint); font-family: "IBM Plex Mono", ui-monospace, monospace; }
-  .gl-dept { display: inline-block; margin-top: 2px; font-size: 11px; color: var(--ink-faint); background: var(--plate-edge); border-radius: 4px; padding: 1px 6px; }
-  .gl-def { flex: 1; min-width: 160px; font-size: 13.5px; color: var(--ink-muted); line-height: 1.5; }
-  .gl-calc { margin-top: 3px; font-size: 12px; color: var(--ink-faint); }
-  .gl-star-btn { flex: none; background: none; border: none; cursor: pointer; font-size: 16px; line-height: 1; padding: 6px; color: var(--ink-faint); }
+  .gl-table-wrap { overflow-x: auto; margin-top: 6px; }
+  .glossary-table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13px; }
+  .glossary-table th, .glossary-table td { border: 1px solid var(--plate-edge); padding: 8px 10px; text-align: left; vertical-align: top; }
+  .glossary-table th { background: var(--plate); font-weight: 600; white-space: nowrap; }
+  .glossary-table tr.important td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .gl-star-cell { width: 1%; white-space: nowrap; text-align: center; }
+  .gl-term-kr-cell { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .gl-term-en-cell { font-family: "IBM Plex Mono", ui-monospace, monospace; color: var(--ink-muted); white-space: nowrap; cursor: pointer; }
+  .gl-dept-cell { color: var(--ink-muted); white-space: nowrap; cursor: pointer; }
+  .gl-def-cell { cursor: pointer; line-height: 1.5; }
+  .gl-row-click:hover { background: var(--plate); }
+  .gl-calc { margin-top: 3px; font-size: 11.5px; color: var(--ink-faint); }
+  .gl-star-btn { background: none; border: none; cursor: pointer; font-size: 15px; line-height: 1; padding: 2px; color: var(--ink-faint); }
   .gl-star-btn.on { color: var(--accent); }
   .gl-star-btn:hover { color: var(--accent); }
   .gl-star-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
@@ -189,7 +189,12 @@
       <button class="btn btn-accent" id="gl-add-btn" type="button">새 용어 추가</button>
     </div>
     <p class="gl-list-lang"><button type="button" class="link-btn" id="gl-list-lang-btn">English list →</button></p>
-    <div class="gl-list" id="gl-list"></div>
+    <div class="gl-table-wrap">
+      <table class="glossary-table">
+        <thead><tr id="gl-thead"></tr></thead>
+        <tbody id="gl-list"></tbody>
+      </table>
+    </div>
     <p class="empty" id="gl-empty" hidden>등록된 용어가 없습니다.</p>
   </section>
 
@@ -275,6 +280,7 @@
     glImportBtn: document.getElementById('gl-import-btn'),
     glImportFile: document.getElementById('gl-import-file'),
     glListLangBtn: document.getElementById('gl-list-lang-btn'),
+    glThead: document.getElementById('gl-thead'),
     glList: document.getElementById('gl-list'),
     glEmpty: document.getElementById('gl-empty'),
     glSearch: document.getElementById('gl-search'),
@@ -327,6 +333,7 @@
       errPermission: '권한이 없습니다', errCode: '오류 ({code})', errGeneric: '오류가 발생했습니다',
       glFormAdd: '새 용어 추가', glFormEdit: '용어 수정', fieldTermKr: '한글', fieldTermEn: '영문', fieldDept: '부서',
       deptPh: '예: KPI, Quality, Material', fieldDef: '정의', fieldDefEn: '영문 정의 (English list에 표시됨)', fieldCalc: '산출법/계산식 (있는 경우)',
+      colKr: '한글', colEn: '영문', colDept: '부서', colDef: '정의',
       fieldImportant: '중요 용어로 표시 (색상 강조)', toastTermRequired: '용어(한글 또는 영문)를 입력해주세요',
       toastDupGlossary: '이미 저장된 용어입니다', glCalcPrefix: '산출법: ',
       smFormTitle: '노트를 학습자료로 저장', catMyNotesPh: '예: 내 노트', fieldClearAfterSave: '저장 후 노트 비우기',
@@ -358,6 +365,7 @@
       errPermission: 'Permission denied', errCode: 'Error ({code})', errGeneric: 'An error occurred',
       glFormAdd: 'Add term', glFormEdit: 'Edit term', fieldTermKr: 'Korean', fieldTermEn: 'English', fieldDept: 'Department',
       deptPh: 'e.g. KPI, Quality, Material', fieldDef: 'Definition', fieldDefEn: 'English definition (shown on the English list)', fieldCalc: 'Formula / calculation (if any)',
+      colKr: 'Korean', colEn: 'English', colDept: 'Department', colDef: 'Definition',
       fieldImportant: 'Mark as important (highlight)', toastTermRequired: 'Please enter a term (Korean or English)',
       toastDupGlossary: 'This term is already saved', glCalcPrefix: 'Formula: ',
       smFormTitle: 'Save note as material', catMyNotesPh: 'e.g. My Notes', fieldClearAfterSave: 'Clear notes after saving',
@@ -719,9 +727,12 @@
   }
   function renderGlossary() {
     el.glListLangBtn.textContent = state.glListLang === 'en' ? '← 한글 목록' : 'English list →';
-    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
-    var q = state.glQuery.trim().toLowerCase();
     var isEn = state.glListLang === 'en';
+    el.glThead.innerHTML = '<th></th>' + (isEn
+      ? '<th>' + escapeHtml(t('colEn')) + '</th><th>' + escapeHtml(t('colDept')) + '</th><th>' + escapeHtml(t('colDef')) + '</th>'
+      : '<th>' + escapeHtml(t('colKr')) + '</th><th>' + escapeHtml(t('colEn')) + '</th><th>' + escapeHtml(t('colDept')) + '</th><th>' + escapeHtml(t('colDef')) + '</th>');
+    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<tr><td colspan="5" class="empty">' + escapeHtml(t('loading')) + '</td></tr>'; return; }
+    var q = state.glQuery.trim().toLowerCase();
     function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
     var base = isEn ? state.glossary.filter(function (g) { return !!(g.term_en || '').trim(); }) : state.glossary;
     var filtered = base.filter(function (g) {
@@ -739,31 +750,31 @@
     el.glEmpty.hidden = filtered.length !== 0 || base.length !== 0;
     el.glEmpty.textContent = t('glEmpty');
     if (!base.length) { el.glList.innerHTML = ''; return; }
-    if (!filtered.length) { el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('noResults')) + '</p>'; return; }
+    if (!filtered.length) { el.glList.innerHTML = '<tr><td colspan="5" class="empty">' + escapeHtml(t('noResults')) + '</td></tr>'; return; }
     if (isEn) {
       filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (a.term_en || '').localeCompare(b.term_en || ''); });
     } else {
       filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (termKr(a) || '').localeCompare(termKr(b) || '', 'ko'); });
     }
     el.glList.innerHTML = filtered.map(function (g) {
-      var termCol = isEn
-        ? '<span class="gl-term">' + escapeHtml(g.term_en || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
-          (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '')
-        : '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
-          (g.term_en ? '<span class="gl-term-en">' + escapeHtml(g.term_en) + '</span>' : '') +
-          (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '');
-      var defCol = isEn
-        ? escapeHtml(g.definition_en || '') + (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '')
-        : escapeHtml(g.definition || '') + (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '');
-      return '<div class="gl-row' + (g.important ? ' important' : '') + '" data-id="' + g.id + '">' +
-        '<button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="' + escapeHtml(t('fieldImportant')) + '" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button>' +
-        '<button class="gl-term-btn" data-id="' + g.id + '">' +
-        '<span class="gl-term-col">' + termCol + '</span>' +
-        '<span class="gl-def">' + defCol + '</span>' +
-        '</button></div>';
+      var defText = isEn ? (g.definition_en || '') : (g.definition || '');
+      var defCell = escapeHtml(defText) + (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '');
+      var exampleBadge = g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '';
+      var cells = '<td class="gl-star-cell"><button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="' + escapeHtml(t('fieldImportant')) + '" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button></td>';
+      if (isEn) {
+        cells += '<td class="gl-term-en-cell gl-row-click" data-id="' + g.id + '">' + escapeHtml(g.term_en || '') + exampleBadge + '</td>' +
+          '<td class="gl-dept-cell gl-row-click" data-id="' + g.id + '">' + escapeHtml(g.department || '') + '</td>' +
+          '<td class="gl-def-cell gl-row-click" data-id="' + g.id + '">' + defCell + '</td>';
+      } else {
+        cells += '<td class="gl-term-kr-cell gl-row-click" data-id="' + g.id + '">' + escapeHtml(termKr(g) || '') + exampleBadge + '</td>' +
+          '<td class="gl-term-en-cell gl-row-click" data-id="' + g.id + '">' + escapeHtml(g.term_en || '') + '</td>' +
+          '<td class="gl-dept-cell gl-row-click" data-id="' + g.id + '">' + escapeHtml(g.department || '') + '</td>' +
+          '<td class="gl-def-cell gl-row-click" data-id="' + g.id + '">' + defCell + '</td>';
+      }
+      return '<tr' + (g.important ? ' class="important"' : '') + '>' + cells + '</tr>';
     }).join('');
-    el.glList.querySelectorAll('.gl-term-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { var g = state.glossary.find(function (x) { return x.id === btn.dataset.id; }); if (g) openGlossaryForm(g); });
+    el.glList.querySelectorAll('.gl-row-click').forEach(function (cell) {
+      cell.addEventListener('click', function () { var g = state.glossary.find(function (x) { return x.id === cell.dataset.id; }); if (g) openGlossaryForm(g); });
     });
     el.glList.querySelectorAll('.gl-star-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
