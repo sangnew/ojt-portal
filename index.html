@@ -71,11 +71,15 @@
   .gl-row { display: flex; align-items: baseline; gap: 4px; padding: 5px 10px; margin-inline: -10px; border-bottom: 1px solid var(--plate-edge); border-radius: 6px; }
   .gl-row.important { background: color-mix(in srgb, var(--accent) 12%, transparent); }
   .gl-row.important .gl-term { color: var(--accent); }
-  .gl-term-btn { display: flex; align-items: baseline; gap: 16px; flex: 1; min-width: 0; padding: 8px 0; cursor: pointer; background: transparent; border: none; text-align: left; font-family: inherit; color: inherit; }
+  .gl-term-btn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; flex: 1; min-width: 0; padding: 8px 0; cursor: pointer; background: transparent; border: none; text-align: left; font-family: inherit; color: inherit; }
   .gl-term-btn:hover .gl-term { color: var(--accent); }
   .gl-term-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .gl-term { flex: none; width: 34%; min-width: 110px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13.5px; }
-  .gl-def { flex: 1; font-size: 13.5px; color: var(--ink-muted); line-height: 1.5; }
+  .gl-term-col { flex: none; width: 34%; min-width: 110px; }
+  .gl-term { display: block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 13.5px; }
+  .gl-term-en { display: block; font-size: 12px; color: var(--ink-faint); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .gl-dept { display: inline-block; margin-top: 2px; font-size: 11px; color: var(--ink-faint); background: var(--plate-edge); border-radius: 4px; padding: 1px 6px; }
+  .gl-def { flex: 1; min-width: 160px; font-size: 13.5px; color: var(--ink-muted); line-height: 1.5; }
+  .gl-calc { margin-top: 3px; font-size: 12px; color: var(--ink-faint); }
   .gl-star-btn { flex: none; background: none; border: none; cursor: pointer; font-size: 16px; line-height: 1; padding: 6px; color: var(--ink-faint); }
   .gl-star-btn.on { color: var(--accent); }
   .gl-star-btn:hover { color: var(--accent); }
@@ -96,11 +100,21 @@
   .f-input { width: 100%; background: var(--input-bg); color: var(--ink); border: 1px solid var(--plate-edge); border-radius: 6px; padding: 9px 11px; font-family: "IBM Plex Sans KR", sans-serif; font-size: 14px; }
   .f-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .f-textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
+  .f-richtext { min-height: 140px; max-height: 50vh; overflow-y: auto; line-height: 1.6; }
+  .f-richtext:empty::before { content: attr(data-placeholder); color: var(--ink-faint); }
+  .f-richtext p, .f-richtext ul, .f-richtext ol, .f-richtext table { margin: 0 0 8px; }
+  .f-richtext table { border-collapse: collapse; }
+  .f-richtext td, .f-richtext th { border: 1px solid var(--plate-edge); padding: 4px 8px; }
   .f-check { display: flex; align-items: center; gap: 8px; margin: 16px 0 4px; font-size: 13.5px; color: var(--ink-muted); }
   .f-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; }
   .f-actions-right { display: flex; gap: 8px; }
   .detail-meta { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; color: var(--ink-faint); margin: 0 0 14px; }
   .detail-body { font-size: 14.5px; line-height: 1.7; margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .detail-body-rich { white-space: normal; }
+  .detail-body-rich p, .detail-body-rich ul, .detail-body-rich ol, .detail-body-rich table { margin: 0 0 10px; }
+  .detail-body-rich table { border-collapse: collapse; max-width: 100%; }
+  .detail-body-rich td, .detail-body-rich th { border: 1px solid var(--plate-edge); padding: 5px 9px; }
+  .detail-body-rich a { color: var(--accent); }
   .report-list { border-top: 1px solid var(--plate-edge); margin-bottom: 20px; }
   .report-row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--plate-edge); }
   .report-row input[type="checkbox"] { margin-top: 3px; flex: none; }
@@ -269,16 +283,59 @@
   };
 
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  // Allowlist HTML sanitizer: used both when pasting into the rich-text
+  // material body field and when rendering it back out, so formatting
+  // (bold/headings/lists/tables) survives copy-paste without allowing
+  // scripts or event-handler attributes through.
+  var SAN_ALLOWED_TAGS = { P: 1, BR: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, BLOCKQUOTE: 1, CODE: 1, PRE: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TD: 1, TH: 1, A: 1, SPAN: 1, DIV: 1, HR: 1 };
+  var SAN_DROP_TAGS = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, SVG: 1, LINK: 1, META: 1 };
+  var SAN_ALLOWED_ATTRS = { A: ['href'], TD: ['colspan', 'rowspan'], TH: ['colspan', 'rowspan'] };
+  function sanitizeHtml(html) {
+    var doc;
+    try { doc = new DOMParser().parseFromString('<div>' + String(html || '') + '</div>', 'text/html'); }
+    catch (e) { return escapeHtml(html); }
+    var root = doc.body.firstChild;
+    if (!root) return '';
+    (function clean(node) {
+      Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+        if (child.nodeType === 3) return;
+        if (child.nodeType !== 1) { node.removeChild(child); return; }
+        if (SAN_DROP_TAGS[child.tagName]) { node.removeChild(child); return; }
+        if (!SAN_ALLOWED_TAGS[child.tagName]) {
+          while (child.firstChild) node.insertBefore(child.firstChild, child);
+          node.removeChild(child);
+          return;
+        }
+        var allowed = SAN_ALLOWED_ATTRS[child.tagName] || [];
+        Array.prototype.slice.call(child.attributes).forEach(function (attr) {
+          if (allowed.indexOf(attr.name) === -1) child.removeAttribute(attr.name);
+        });
+        if (child.tagName === 'A') {
+          var href = child.getAttribute('href') || '';
+          if (!/^https?:\/\//i.test(href)) child.removeAttribute('href');
+          else { child.setAttribute('target', '_blank'); child.setAttribute('rel', 'noopener noreferrer'); }
+        }
+        clean(child);
+      });
+    })(root);
+    return root.innerHTML;
+  }
+  function stripTags(html) { var d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent || ''; }
   function fmtDate(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return ''; } }
   function fmtTime(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
   function norm(s) { return String(s || '').trim().replace(/\s+/g, ' '); }
-  function findDuplicateMaterial(title, body, excludeId) {
-    var t = norm(title), b = norm(body);
-    return state.materials.find(function (m) { return m.id !== excludeId && norm(m.title) === t && norm(m.body) === b; });
+  function findDuplicateMaterial(title, plainBody, excludeId) {
+    var t = norm(title), b = norm(plainBody);
+    return state.materials.find(function (m) {
+      return m.id !== excludeId && norm(m.title) === t && norm(m.bodyIsHtml ? stripTags(m.body) : m.body) === b;
+    });
   }
-  function findDuplicateGlossary(term, definition, excludeId) {
-    var t = norm(term), d = norm(definition);
-    return state.glossary.find(function (g) { return g.id !== excludeId && norm(g.term) === t && norm(g.definition) === d; });
+  function findDuplicateGlossary(termKr, termEn, definition, excludeId) {
+    var tk = norm(termKr), te = norm(termEn), d = norm(definition);
+    return state.glossary.find(function (g) {
+      return g.id !== excludeId && norm(g.term_kr != null ? g.term_kr : g.term) === tk && norm(g.term_en) === te && norm(g.definition) === d;
+    });
   }
 
   var toastTimer;
@@ -315,7 +372,9 @@
         return;
       }
       html += '<label class="f-label" for="' + f.id + '">' + escapeHtml(f.label) + '</label>';
-      if (f.type === 'textarea') {
+      if (f.type === 'richtext') {
+        html += '<div class="f-input f-richtext" id="' + f.id + '" contenteditable="true" data-placeholder="' + escapeHtml(f.placeholder || '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)') + '">' + (f.value || '') + '</div>';
+      } else if (f.type === 'textarea') {
         html += '<textarea class="f-input f-textarea" id="' + f.id + '" rows="6" placeholder="' + escapeHtml(f.placeholder || '') + '">' + escapeHtml(f.value || '') + '</textarea>';
       } else {
         html += '<input class="f-input" id="' + f.id + '" type="text" value="' + escapeHtml(f.value || '') + '" placeholder="' + escapeHtml(f.placeholder || '') + '">';
@@ -326,6 +385,18 @@
       '<div class="f-actions-right"><button type="button" class="btn btn-ghost" id="f-cancel">취소</button><button type="button" class="btn btn-accent" id="f-save">저장</button></div></div>';
     el.modalBody.innerHTML = html;
     el.overlay.hidden = false;
+    opts.fields.forEach(function (f) {
+      if (f.type !== 'richtext') return;
+      var rt = document.getElementById(f.id);
+      rt.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var cd = e.clipboardData || window.clipboardData;
+        var htmlData = cd ? cd.getData('text/html') : '';
+        var textData = cd ? cd.getData('text/plain') : '';
+        var clean = htmlData ? sanitizeHtml(htmlData) : escapeHtml(textData).replace(/\n/g, '<br>');
+        document.execCommand('insertHTML', false, clean);
+      });
+    });
     var first = document.getElementById(opts.fields[0].id);
     if (first) first.focus();
     document.getElementById('f-cancel').addEventListener('click', closeModal);
@@ -339,7 +410,12 @@
     }
     document.getElementById('f-save').addEventListener('click', function () {
       var values = {};
-      opts.fields.forEach(function (f) { var elm = document.getElementById(f.id); values[f.id] = (f.type === 'checkbox') ? elm.checked : elm.value.trim(); });
+      opts.fields.forEach(function (f) {
+        var elm = document.getElementById(f.id);
+        if (f.type === 'checkbox') values[f.id] = elm.checked;
+        else if (f.type === 'richtext') values[f.id] = sanitizeHtml(elm.innerHTML);
+        else values[f.id] = elm.value.trim();
+      });
       var saveBtn = document.getElementById('f-save');
       var result = opts.onSave(values);
       if (result === false) return;
@@ -353,8 +429,11 @@
 
   function openDetail(opts) {
     el.modalTitle.textContent = opts.title;
+    var bodyMarkup = opts.bodyIsHtml
+      ? '<div class="detail-body detail-body-rich">' + sanitizeHtml(opts.body) + '</div>'
+      : '<p class="detail-body">' + escapeHtml(opts.body) + '</p>';
     el.modalBody.innerHTML = '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
-      '<p class="detail-body">' + escapeHtml(opts.body) + '</p>' +
+      bodyMarkup +
       '<div class="f-actions"><span></span><div class="f-actions-right">' +
       '<button type="button" class="btn btn-ghost" id="f-close">닫기</button>' +
       '<button type="button" class="btn btn-accent" id="f-edit">수정</button></div></div>';
@@ -365,20 +444,26 @@
   }
 
   // ---- materials ----
+  function materialBodyEditableHtml(m) {
+    if (!m) return '';
+    if (m.bodyIsHtml) return sanitizeHtml(m.body || '');
+    return escapeHtml(m.body || '').replace(/\n/g, '<br>');
+  }
   function openMaterialForm(m) {
     openForm({
       title: m ? '자료 수정' : '새 자료 추가',
       fields: [
         { id: 'f-mat-title', label: '제목', value: m ? m.title : '' },
         { id: 'f-mat-category', label: '카테고리', value: m ? m.category : '', placeholder: '예: 품질, 공정관리, 용접' },
-        { id: 'f-mat-body', label: '내용', type: 'textarea', value: m ? m.body : '' },
+        { id: 'f-mat-body', label: '내용', type: 'richtext', value: materialBodyEditableHtml(m) },
       ],
       onDelete: m ? function () { return db.collection('materials').doc(m.id).delete(); } : null,
       onSave: function (v) {
         if (!v['f-mat-title']) { showToast('제목을 입력해주세요'); return false; }
-        var payload = { title: v['f-mat-title'], category: v['f-mat-category'] || '기타', body: v['f-mat-body'] };
+        var payload = { title: v['f-mat-title'], category: v['f-mat-category'] || '기타', body: v['f-mat-body'], bodyIsHtml: true };
+        var plainBody = stripTags(v['f-mat-body']);
         if (m) return db.collection('materials').doc(m.id).update(payload);
-        if (findDuplicateMaterial(payload.title, payload.body)) { showToast('이미 저장된 자료입니다'); return false; }
+        if (findDuplicateMaterial(payload.title, plainBody)) { showToast('이미 저장된 자료입니다'); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
         return db.collection('materials').add(payload);
@@ -390,6 +475,7 @@
       title: m.title,
       meta: (m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (m.isExample ? ' · 예시 항목' : ''),
       body: m.body || '',
+      bodyIsHtml: !!m.bodyIsHtml,
       onEdit: function () { openMaterialForm(m); },
     });
   }
@@ -397,9 +483,10 @@
     if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
     try {
       var q = state.matQuery.trim().toLowerCase();
+      function matPlain(m) { return m.bodyIsHtml ? stripTags(m.body) : (m.body || ''); }
       var filtered = state.materials.filter(function (m) {
         if (!q) return true;
-        return (m.title || '').toLowerCase().indexOf(q) !== -1 || (m.body || '').toLowerCase().indexOf(q) !== -1 || (m.category || '').toLowerCase().indexOf(q) !== -1;
+        return (m.title || '').toLowerCase().indexOf(q) !== -1 || matPlain(m).toLowerCase().indexOf(q) !== -1 || (m.category || '').toLowerCase().indexOf(q) !== -1;
       });
       el.matEmpty.hidden = filtered.length !== 0 || state.materials.length !== 0;
       if (!state.materials.length) { el.matList.innerHTML = ''; return; }
@@ -411,9 +498,10 @@
       cats.forEach(function (cat) {
         html += '<div class="cat-label">' + escapeHtml(cat) + '</div><div class="mat-grid">';
         groups[cat].sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); }).forEach(function (m) {
+          var snipSrc = matPlain(m);
           html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">예시</span>' : '') +
             '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
-            '<span class="mat-card-snip">' + escapeHtml((m.body || '').slice(0, 72)) + ((m.body || '').length > 72 ? '…' : '') + '</span></button>';
+            '<span class="mat-card-snip">' + escapeHtml(snipSrc.slice(0, 72)) + (snipSrc.length > 72 ? '…' : '') + '</span></button>';
         });
         html += '</div>';
       });
@@ -448,7 +536,7 @@
     ids.forEach(function (id) {
       var m = state.materials.find(function (x) { return x.id === id; });
       if (!m) return;
-      lines.push('', '[' + (m.category || '기타') + '] ' + m.title, ''.padEnd(30, '-'), m.body || '');
+      lines.push('', '[' + (m.category || '기타') + '] ' + m.title, ''.padEnd(30, '-'), (m.bodyIsHtml ? stripTags(m.body) : m.body) || '');
     });
     if (includeNotes) {
       lines.push('', '[노트]', ''.padEnd(30, '-'), el.notesArea.value || '(내용 없음)');
@@ -470,16 +558,22 @@
     openForm({
       title: g ? '용어 수정' : '새 용어 추가',
       fields: [
-        { id: 'f-gl-term', label: '용어', value: g ? g.term : '' },
-        { id: 'f-gl-def', label: '정의', type: 'textarea', value: g ? g.definition : '' },
+        { id: 'f-gl-term-kr', label: '한글', value: g ? (g.term_kr != null ? g.term_kr : g.term) : '' },
+        { id: 'f-gl-term-en', label: '영문', value: g ? (g.term_en || '') : '' },
+        { id: 'f-gl-dept', label: '부서', value: g ? (g.department || '') : '', placeholder: '예: KPI, Quality, Material' },
+        { id: 'f-gl-def', label: '정의', type: 'textarea', value: g ? (g.definition || '') : '' },
+        { id: 'f-gl-calc', label: '산출법/계산식 (있는 경우)', value: g ? (g.calc || '') : '' },
         { id: 'f-gl-important', label: '중요 용어로 표시 (색상 강조)', type: 'checkbox', checked: g ? !!g.important : false },
       ],
       onDelete: g ? function () { return db.collection('glossary').doc(g.id).delete(); } : null,
       onSave: function (v) {
-        if (!v['f-gl-term']) { showToast('용어를 입력해주세요'); return false; }
-        var payload = { term: v['f-gl-term'], definition: v['f-gl-def'], important: !!v['f-gl-important'] };
+        if (!v['f-gl-term-kr'] && !v['f-gl-term-en']) { showToast('용어(한글 또는 영문)를 입력해주세요'); return false; }
+        var payload = {
+          term_kr: v['f-gl-term-kr'], term_en: v['f-gl-term-en'], department: v['f-gl-dept'],
+          definition: v['f-gl-def'], calc: v['f-gl-calc'], important: !!v['f-gl-important'],
+        };
         if (g) return db.collection('glossary').doc(g.id).update(payload);
-        if (findDuplicateGlossary(payload.term, payload.definition)) { showToast('이미 저장된 용어입니다'); return false; }
+        if (findDuplicateGlossary(payload.term_kr, payload.term_en, payload.definition)) { showToast('이미 저장된 용어입니다'); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
         return db.collection('glossary').add(payload);
@@ -489,17 +583,30 @@
   function renderGlossary() {
     if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">불러오는 중…</p>'; return; }
     var q = state.glQuery.trim().toLowerCase();
-    var filtered = state.glossary.filter(function (g) { if (!q) return true; return (g.term || '').toLowerCase().indexOf(q) !== -1 || (g.definition || '').toLowerCase().indexOf(q) !== -1; });
+    function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
+    var filtered = state.glossary.filter(function (g) {
+      if (!q) return true;
+      return (termKr(g) || '').toLowerCase().indexOf(q) !== -1 ||
+        (g.term_en || '').toLowerCase().indexOf(q) !== -1 ||
+        (g.department || '').toLowerCase().indexOf(q) !== -1 ||
+        (g.definition || '').toLowerCase().indexOf(q) !== -1;
+    });
     el.glEmpty.hidden = filtered.length !== 0 || state.glossary.length !== 0;
     if (!state.glossary.length) { el.glList.innerHTML = ''; return; }
     if (!filtered.length) { el.glList.innerHTML = '<p class="empty">검색 결과가 없습니다.</p>'; return; }
-    filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (a.term || '').localeCompare(b.term || '', 'ko'); });
+    filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (termKr(a) || '').localeCompare(termKr(b) || '', 'ko'); });
     el.glList.innerHTML = filtered.map(function (g) {
       return '<div class="gl-row' + (g.important ? ' important' : '') + '" data-id="' + g.id + '">' +
         '<button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="중요 용어로 표시" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button>' +
         '<button class="gl-term-btn" data-id="' + g.id + '">' +
-        '<span class="gl-term">' + escapeHtml(g.term) + (g.isExample ? ' <span class="badge">예시</span>' : '') + '</span>' +
-        '<span class="gl-def">' + escapeHtml(g.definition || '') + '</span>' +
+        '<span class="gl-term-col">' +
+        '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">예시</span>' : '') + '</span>' +
+        (g.term_en ? '<span class="gl-term-en">' + escapeHtml(g.term_en) + '</span>' : '') +
+        (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '') +
+        '</span>' +
+        '<span class="gl-def">' + escapeHtml(g.definition || '') +
+        (g.calc ? '<div class="gl-calc">산출법: ' + escapeHtml(g.calc) + '</div>' : '') +
+        '</span>' +
         '</button></div>';
     }).join('');
     el.glList.querySelectorAll('.gl-term-btn').forEach(function (btn) {
