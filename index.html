@@ -182,6 +182,8 @@
   <section id="panel-glossary" hidden>
     <div class="panel-head">
       <input class="search" id="gl-search" type="text" placeholder="용어 검색…">
+      <button class="btn btn-ghost" id="gl-import-btn" type="button" hidden>용어 가져오기 (JSON)</button>
+      <input type="file" id="gl-import-file" accept="application/json" hidden>
       <button class="btn btn-accent" id="gl-add-btn" type="button">새 용어 추가</button>
     </div>
     <div class="gl-list" id="gl-list"></div>
@@ -267,6 +269,8 @@
     matAddBtn: document.getElementById('mat-add-btn'),
     matImportBtn: document.getElementById('mat-import-btn'),
     matImportFile: document.getElementById('mat-import-file'),
+    glImportBtn: document.getElementById('gl-import-btn'),
+    glImportFile: document.getElementById('gl-import-file'),
     glList: document.getElementById('gl-list'),
     glEmpty: document.getElementById('gl-empty'),
     glSearch: document.getElementById('gl-search'),
@@ -308,7 +312,7 @@
       reportTitleLabel: '보고서 제목', reportTitlePh: '예: 이번 주 학습 정리', reportIncludeNotes: '현재 노트 내용 포함',
       reportMaterialsLabel: '포함할 학습자료', reportEmpty: '선택할 수 있는 학습자료가 없습니다.', reportExportBtn: '보고서로 내보내기',
       catOther: '기타', catMyNotes: '내 노트', badgeExample: '예시',
-      matImportBtn: '자료 가져오기 (JSON)',
+      matImportBtn: '자료 가져오기 (JSON)', glImportBtn: '용어 가져오기 (JSON)',
       importDone: '{added}개 추가됨' , importSkipped: ' · {skipped}개는 이미 있어서 건너뜀',
       importBadFile: 'JSON 파일을 읽을 수 없습니다 (형식을 확인해주세요)',
       matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
@@ -339,7 +343,7 @@
       reportTitleLabel: 'Report title', reportTitlePh: "e.g. This week's learning summary", reportIncludeNotes: 'Include current notes',
       reportMaterialsLabel: 'Materials to include', reportEmpty: 'No materials available to select.', reportExportBtn: 'Export report',
       catOther: 'Other', catMyNotes: 'My Notes', badgeExample: 'Example',
-      matImportBtn: 'Import materials (JSON)',
+      matImportBtn: 'Import materials (JSON)', glImportBtn: 'Import terms (JSON)',
       importDone: '{added} added', importSkipped: ' · {skipped} already existed, skipped',
       importBadFile: 'Could not read the JSON file (check its format)',
       matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
@@ -461,6 +465,8 @@
     el.matImportBtn.hidden = !state.isOwner;
     el.glSearch.placeholder = t('glSearchPh');
     el.glAddBtn.textContent = t('glAddBtn');
+    el.glImportBtn.textContent = t('glImportBtn');
+    el.glImportBtn.hidden = !state.isOwner;
     el.notesArea.placeholder = t('notesPh');
     el.notesClearBtn.textContent = t('notesClearBtn');
     el.notesExportBtn.textContent = t('notesExportBtn');
@@ -836,6 +842,39 @@
     reader.readAsText(file);
   });
   el.glAddBtn.addEventListener('click', function () { openGlossaryForm(null); });
+
+  el.glImportBtn.addEventListener('click', function () { el.glImportFile.value = ''; el.glImportFile.click(); });
+  el.glImportFile.addEventListener('change', function () {
+    var file = el.glImportFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var items;
+      try { items = JSON.parse(reader.result); } catch (e) { showToast(t('importBadFile')); return; }
+      if (!Array.isArray(items)) { showToast(t('importBadFile')); return; }
+      el.glImportBtn.disabled = true;
+      var added = 0, skipped = 0;
+      var chain = Promise.resolve();
+      items.forEach(function (item) {
+        chain = chain.then(function () {
+          if (!item || (!item.term_kr && !item.term_en)) { skipped++; return; }
+          if (findDuplicateGlossary(item.term_kr || '', item.term_en || '', item.definition || '')) { skipped++; return; }
+          return db.collection('glossary').add({
+            term_kr: item.term_kr || '', term_en: item.term_en || '', department: item.department || '',
+            definition: item.definition || '', calc: item.calc || '', important: !!item.important,
+            addedAt: item.addedAt || new Date().toISOString(), isExample: false,
+          }).then(function () { added++; });
+        });
+      });
+      chain.then(function () {
+        el.glImportBtn.disabled = false;
+        var msg = t('importDone').replace('{added}', added);
+        if (skipped) msg += t('importSkipped').replace('{skipped}', skipped);
+        showToast(msg);
+      }).catch(function (e) { el.glImportBtn.disabled = false; showToast(errMsg(e)); });
+    };
+    reader.readAsText(file);
+  });
 
   // ---- auth ----
   el.loginBtn.addEventListener('click', function () {
