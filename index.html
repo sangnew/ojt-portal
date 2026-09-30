@@ -67,6 +67,8 @@
   .mat-card-title { font-weight: 600; font-size: 14.5px; text-wrap: balance; }
   .mat-card-snip { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
   .badge { align-self: flex-start; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; }
+  .link-btn { background: none; border: none; padding: 0; color: var(--accent); font-size: 12.5px; cursor: pointer; text-decoration: underline; font-family: inherit; }
+  .gl-list-lang { margin: -6px 0 10px; }
   .gl-list { display: flex; flex-direction: column; border-top: 1px solid var(--plate-edge); }
   .gl-row { display: flex; align-items: baseline; gap: 4px; padding: 5px 10px; margin-inline: -10px; border-bottom: 1px solid var(--plate-edge); border-radius: 6px; }
   .gl-row.important { background: color-mix(in srgb, var(--accent) 12%, transparent); }
@@ -186,6 +188,7 @@
       <input type="file" id="gl-import-file" accept="application/json" hidden>
       <button class="btn btn-accent" id="gl-add-btn" type="button">새 용어 추가</button>
     </div>
+    <p class="gl-list-lang"><button type="button" class="link-btn" id="gl-list-lang-btn">English list →</button></p>
     <div class="gl-list" id="gl-list"></div>
     <p class="empty" id="gl-empty" hidden>등록된 용어가 없습니다.</p>
   </section>
@@ -249,7 +252,7 @@
   var db = firebase.firestore();
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false };
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr' };
   var lastSyncedNotes = '';
   var unsubMaterials, unsubGlossary, unsubNotes;
 
@@ -271,6 +274,7 @@
     matImportFile: document.getElementById('mat-import-file'),
     glImportBtn: document.getElementById('gl-import-btn'),
     glImportFile: document.getElementById('gl-import-file'),
+    glListLangBtn: document.getElementById('gl-list-lang-btn'),
     glList: document.getElementById('gl-list'),
     glEmpty: document.getElementById('gl-empty'),
     glSearch: document.getElementById('gl-search'),
@@ -322,7 +326,7 @@
       toastDupMaterial: '이미 저장된 자료입니다',
       errPermission: '권한이 없습니다', errCode: '오류 ({code})', errGeneric: '오류가 발생했습니다',
       glFormAdd: '새 용어 추가', glFormEdit: '용어 수정', fieldTermKr: '한글', fieldTermEn: '영문', fieldDept: '부서',
-      deptPh: '예: KPI, Quality, Material', fieldDef: '정의', fieldCalc: '산출법/계산식 (있는 경우)',
+      deptPh: '예: KPI, Quality, Material', fieldDef: '정의', fieldDefEn: '영문 정의 (English list에 표시됨)', fieldCalc: '산출법/계산식 (있는 경우)',
       fieldImportant: '중요 용어로 표시 (색상 강조)', toastTermRequired: '용어(한글 또는 영문)를 입력해주세요',
       toastDupGlossary: '이미 저장된 용어입니다', glCalcPrefix: '산출법: ',
       smFormTitle: '노트를 학습자료로 저장', catMyNotesPh: '예: 내 노트', fieldClearAfterSave: '저장 후 노트 비우기',
@@ -353,7 +357,7 @@
       toastDupMaterial: 'This material is already saved',
       errPermission: 'Permission denied', errCode: 'Error ({code})', errGeneric: 'An error occurred',
       glFormAdd: 'Add term', glFormEdit: 'Edit term', fieldTermKr: 'Korean', fieldTermEn: 'English', fieldDept: 'Department',
-      deptPh: 'e.g. KPI, Quality, Material', fieldDef: 'Definition', fieldCalc: 'Formula / calculation (if any)',
+      deptPh: 'e.g. KPI, Quality, Material', fieldDef: 'Definition', fieldDefEn: 'English definition (shown on the English list)', fieldCalc: 'Formula / calculation (if any)',
       fieldImportant: 'Mark as important (highlight)', toastTermRequired: 'Please enter a term (Korean or English)',
       toastDupGlossary: 'This term is already saved', glCalcPrefix: 'Formula: ',
       smFormTitle: 'Save note as material', catMyNotesPh: 'e.g. My Notes', fieldClearAfterSave: 'Clear notes after saving',
@@ -694,6 +698,7 @@
         { id: 'f-gl-term-en', label: t('fieldTermEn'), value: g ? (g.term_en || '') : '' },
         { id: 'f-gl-dept', label: t('fieldDept'), value: g ? (g.department || '') : '', placeholder: t('deptPh') },
         { id: 'f-gl-def', label: t('fieldDef'), type: 'textarea', value: g ? (g.definition || '') : '' },
+        { id: 'f-gl-def-en', label: t('fieldDefEn'), type: 'textarea', value: g ? (g.definition_en || '') : '' },
         { id: 'f-gl-calc', label: t('fieldCalc'), value: g ? (g.calc || '') : '' },
         { id: 'f-gl-important', label: t('fieldImportant'), type: 'checkbox', checked: g ? !!g.important : false },
       ],
@@ -702,7 +707,7 @@
         if (!v['f-gl-term-kr'] && !v['f-gl-term-en']) { showToast(t('toastTermRequired')); return false; }
         var payload = {
           term_kr: v['f-gl-term-kr'], term_en: v['f-gl-term-en'], department: v['f-gl-dept'],
-          definition: v['f-gl-def'], calc: v['f-gl-calc'], important: !!v['f-gl-important'],
+          definition: v['f-gl-def'], definition_en: v['f-gl-def-en'], calc: v['f-gl-calc'], important: !!v['f-gl-important'],
         };
         if (g) return db.collection('glossary').doc(g.id).update(payload);
         if (findDuplicateGlossary(payload.term_kr, payload.term_en, payload.definition)) { showToast(t('toastDupGlossary')); return false; }
@@ -713,33 +718,48 @@
     });
   }
   function renderGlossary() {
+    el.glListLangBtn.textContent = state.glListLang === 'en' ? '← 한글 목록' : 'English list →';
     if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
     var q = state.glQuery.trim().toLowerCase();
+    var isEn = state.glListLang === 'en';
     function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
-    var filtered = state.glossary.filter(function (g) {
+    var base = isEn ? state.glossary.filter(function (g) { return !!(g.term_en || '').trim(); }) : state.glossary;
+    var filtered = base.filter(function (g) {
       if (!q) return true;
+      if (isEn) {
+        return (g.term_en || '').toLowerCase().indexOf(q) !== -1 ||
+          (g.department || '').toLowerCase().indexOf(q) !== -1 ||
+          (g.definition_en || '').toLowerCase().indexOf(q) !== -1;
+      }
       return (termKr(g) || '').toLowerCase().indexOf(q) !== -1 ||
         (g.term_en || '').toLowerCase().indexOf(q) !== -1 ||
         (g.department || '').toLowerCase().indexOf(q) !== -1 ||
         (g.definition || '').toLowerCase().indexOf(q) !== -1;
     });
-    el.glEmpty.hidden = filtered.length !== 0 || state.glossary.length !== 0;
+    el.glEmpty.hidden = filtered.length !== 0 || base.length !== 0;
     el.glEmpty.textContent = t('glEmpty');
-    if (!state.glossary.length) { el.glList.innerHTML = ''; return; }
+    if (!base.length) { el.glList.innerHTML = ''; return; }
     if (!filtered.length) { el.glList.innerHTML = '<p class="empty">' + escapeHtml(t('noResults')) + '</p>'; return; }
-    filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (termKr(a) || '').localeCompare(termKr(b) || '', 'ko'); });
+    if (isEn) {
+      filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (a.term_en || '').localeCompare(b.term_en || ''); });
+    } else {
+      filtered.sort(function (a, b) { return (b.important ? 1 : 0) - (a.important ? 1 : 0) || (termKr(a) || '').localeCompare(termKr(b) || '', 'ko'); });
+    }
     el.glList.innerHTML = filtered.map(function (g) {
+      var termCol = isEn
+        ? '<span class="gl-term">' + escapeHtml(g.term_en || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
+          (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '')
+        : '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
+          (g.term_en ? '<span class="gl-term-en">' + escapeHtml(g.term_en) + '</span>' : '') +
+          (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '');
+      var defCol = isEn
+        ? escapeHtml(g.definition_en || '') + (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '')
+        : escapeHtml(g.definition || '') + (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '');
       return '<div class="gl-row' + (g.important ? ' important' : '') + '" data-id="' + g.id + '">' +
         '<button class="gl-star-btn' + (g.important ? ' on' : '') + '" data-id="' + g.id + '" title="' + escapeHtml(t('fieldImportant')) + '" aria-pressed="' + (g.important ? 'true' : 'false') + '">' + (g.important ? '★' : '☆') + '</button>' +
         '<button class="gl-term-btn" data-id="' + g.id + '">' +
-        '<span class="gl-term-col">' +
-        '<span class="gl-term">' + escapeHtml(termKr(g) || '') + (g.isExample ? ' <span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + '</span>' +
-        (g.term_en ? '<span class="gl-term-en">' + escapeHtml(g.term_en) + '</span>' : '') +
-        (g.department ? '<span class="gl-dept">' + escapeHtml(g.department) + '</span>' : '') +
-        '</span>' +
-        '<span class="gl-def">' + escapeHtml(g.definition || '') +
-        (g.calc ? '<div class="gl-calc">' + escapeHtml(t('glCalcPrefix')) + escapeHtml(g.calc) + '</div>' : '') +
-        '</span>' +
+        '<span class="gl-term-col">' + termCol + '</span>' +
+        '<span class="gl-def">' + defCol + '</span>' +
         '</button></div>';
     }).join('');
     el.glList.querySelectorAll('.gl-term-btn').forEach(function (btn) {
@@ -754,6 +774,10 @@
       });
     });
   }
+  el.glListLangBtn.addEventListener('click', function () {
+    state.glListLang = state.glListLang === 'en' ? 'kr' : 'en';
+    renderGlossary();
+  });
 
   // ---- notes -> material ----
   function openSaveNoteAsMaterialForm() {
@@ -861,7 +885,7 @@
           if (findDuplicateGlossary(item.term_kr || '', item.term_en || '', item.definition || '')) { skipped++; return; }
           return db.collection('glossary').add({
             term_kr: item.term_kr || '', term_en: item.term_en || '', department: item.department || '',
-            definition: item.definition || '', calc: item.calc || '', important: !!item.important,
+            definition: item.definition || '', definition_en: item.definition_en || '', calc: item.calc || '', important: !!item.important,
             addedAt: item.addedAt || new Date().toISOString(), isExample: false,
           }).then(function () { added++; });
         });
