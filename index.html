@@ -323,6 +323,7 @@
       reportMaterialsLabel: '포함할 학습자료', reportEmpty: '선택할 수 있는 학습자료가 없습니다.', reportExportBtn: '보고서로 내보내기',
       catOther: '기타', catMyNotes: '내 노트', badgeExample: '예시',
       matImportBtn: '자료 가져오기 (JSON)', glImportBtn: '용어 가져오기 (JSON)',
+      fieldPrivateOwner: '나(소유자)만 보기 (다른 계정에는 숨김)',
       importDone: '{added}개 추가됨' , importSkipped: ' · {skipped}개는 이미 있어서 건너뜀',
       importBadFile: 'JSON 파일을 읽을 수 없습니다 (형식을 확인해주세요)',
       matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
@@ -355,6 +356,7 @@
       reportMaterialsLabel: 'Materials to include', reportEmpty: 'No materials available to select.', reportExportBtn: 'Export report',
       catOther: 'Other', catMyNotes: 'My Notes', badgeExample: 'Example',
       matImportBtn: 'Import materials (JSON)', glImportBtn: 'Import terms (JSON)',
+      fieldPrivateOwner: 'Visible to me (owner) only',
       importDone: '{added} added', importSkipped: ' · {skipped} already existed, skipped',
       importBadFile: 'Could not read the JSON file (check its format)',
       matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
@@ -592,17 +594,22 @@
     return escapeHtml(m.body || '').replace(/\n/g, '<br>');
   }
   function openMaterialForm(m) {
+    var fields = [
+      { id: 'f-mat-title', label: t('fieldTitle'), value: m ? m.title : '' },
+      { id: 'f-mat-category', label: t('fieldCategory'), value: m ? m.category : '', placeholder: t('matCategoryPh') },
+      { id: 'f-mat-body', label: t('fieldContent'), type: 'richtext', value: materialBodyEditableHtml(m) },
+    ];
+    if (state.isOwner) {
+      fields.push({ id: 'f-mat-private', label: t('fieldPrivateOwner'), type: 'checkbox', checked: m ? !!m.visibleToUid : false });
+    }
     openForm({
       title: m ? t('matFormEdit') : t('matFormAdd'),
-      fields: [
-        { id: 'f-mat-title', label: t('fieldTitle'), value: m ? m.title : '' },
-        { id: 'f-mat-category', label: t('fieldCategory'), value: m ? m.category : '', placeholder: t('matCategoryPh') },
-        { id: 'f-mat-body', label: t('fieldContent'), type: 'richtext', value: materialBodyEditableHtml(m) },
-      ],
+      fields: fields,
       onDelete: (m && state.isOwner) ? function () { return db.collection('materials').doc(m.id).delete(); } : null,
       onSave: function (v) {
         if (!v['f-mat-title']) { showToast(t('toastTitleRequired')); return false; }
         var payload = { title: v['f-mat-title'], category: v['f-mat-category'] || '기타', body: v['f-mat-body'], bodyIsHtml: true };
+        if (state.isOwner) payload.visibleToUid = v['f-mat-private'] ? OWNER_UID : '';
         var plainBody = stripTags(v['f-mat-body']);
         if (m) return db.collection('materials').doc(m.id).update(payload);
         if (findDuplicateMaterial(payload.title, plainBody)) { showToast(t('toastDupMaterial')); return false; }
@@ -615,24 +622,28 @@
   function openMaterialDetail(m) {
     openDetail({
       title: m.title,
-      meta: displayCategory(m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (m.isExample ? ' · ' + t('badgeExample') : ''),
+      meta: displayCategory(m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (m.isExample ? ' · ' + t('badgeExample') : '') + (m.visibleToUid ? ' · 🔒 ' + t('fieldPrivateOwner') : ''),
       body: m.body || '',
       bodyIsHtml: !!m.bodyIsHtml,
       onEdit: function () { openMaterialForm(m); },
     });
   }
+  function visibleMaterials() {
+    return state.materials.filter(function (m) { return !m.visibleToUid || m.visibleToUid === state.uid; });
+  }
   function renderMaterials() {
     if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
     try {
+      var visible = visibleMaterials();
       var q = state.matQuery.trim().toLowerCase();
       function matPlain(m) { return m.bodyIsHtml ? stripTags(m.body) : (m.body || ''); }
-      var filtered = state.materials.filter(function (m) {
+      var filtered = visible.filter(function (m) {
         if (!q) return true;
         return (m.title || '').toLowerCase().indexOf(q) !== -1 || matPlain(m).toLowerCase().indexOf(q) !== -1 || (m.category || '').toLowerCase().indexOf(q) !== -1;
       });
-      el.matEmpty.hidden = filtered.length !== 0 || state.materials.length !== 0;
+      el.matEmpty.hidden = filtered.length !== 0 || visible.length !== 0;
       el.matEmpty.textContent = t('matEmpty');
-      if (!state.materials.length) { el.matList.innerHTML = ''; return; }
+      if (!visible.length) { el.matList.innerHTML = ''; return; }
       if (!filtered.length) { el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('noResults')) + '</p>'; return; }
       var groups = {};
       filtered.forEach(function (m) { var c = m.category || '기타'; (groups[c] = groups[c] || []).push(m); });
@@ -642,7 +653,7 @@
         html += '<div class="cat-label">' + escapeHtml(displayCategory(cat)) + '</div><div class="mat-grid">';
         groups[cat].sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); }).forEach(function (m) {
           var snipSrc = matPlain(m);
-          html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') +
+          html += '<button class="mat-card" data-id="' + m.id + '">' + (m.isExample ? '<span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + (m.visibleToUid ? '<span class="badge">🔒</span>' : '') +
             '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
             '<span class="mat-card-snip">' + escapeHtml(snipSrc.slice(0, 72)) + (snipSrc.length > 72 ? '…' : '') + '</span></button>';
         });
@@ -661,10 +672,11 @@
   // ---- report ----
   function renderReportList() {
     if (!state.materialsLoaded) { el.reportList.innerHTML = ''; el.reportEmpty.hidden = true; return; }
+    var visible = visibleMaterials();
     var checkedIds = Array.prototype.slice.call(el.reportList.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) { return c.dataset.id; });
-    el.reportEmpty.hidden = state.materials.length !== 0;
+    el.reportEmpty.hidden = visible.length !== 0;
     el.reportEmpty.textContent = t('reportEmpty');
-    var sorted = state.materials.slice().sort(function (a, b) { return (a.category || '').localeCompare(b.category || '', 'ko') || (a.title || '').localeCompare(b.title || '', 'ko'); });
+    var sorted = visible.slice().sort(function (a, b) { return (a.category || '').localeCompare(b.category || '', 'ko') || (a.title || '').localeCompare(b.title || '', 'ko'); });
     el.reportList.innerHTML = sorted.map(function (m) {
       var checked = checkedIds.indexOf(m.id) !== -1 ? ' checked' : '';
       return '<label class="report-row"><input type="checkbox" data-id="' + m.id + '"' + checked + '>' +
@@ -864,6 +876,7 @@
           return db.collection('materials').add({
             title: item.title, category: item.category || '기타', body: sanitizeHtml(item.body),
             bodyIsHtml: bodyIsHtml, addedAt: item.addedAt || new Date().toISOString(), isExample: false,
+            visibleToUid: item.visibleToUid || '',
           }).then(function () { added++; });
         });
       });
@@ -957,6 +970,7 @@
   auth.onAuthStateChanged(function (user) {
     if (user) {
       state.isOwner = user.uid === OWNER_UID;
+      state.uid = user.uid;
       el.loginScreen.hidden = true;
       el.app.hidden = false;
       applyLang();
