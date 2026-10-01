@@ -131,7 +131,10 @@
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); background: var(--ink); color: var(--plate); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; padding: 10px 18px; border-radius: 999px; max-width: calc(100% - 40px); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease; z-index: 20; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
-  .drop-hint-text { margin: -10px 0 16px; font-size: 11.5px; color: var(--ink-faint); }
+  .dropzone { margin: 0 0 16px; padding: 16px; border: 2px dashed var(--plate-edge); border-radius: 10px; text-align: center; font-size: 12.5px; color: var(--ink-muted); cursor: pointer; }
+  .dropzone:hover, .dropzone:focus-visible { border-color: var(--accent); color: var(--ink); }
+  .dropzone.drag-over { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .dropzone:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .drop-overlay { position: fixed; inset: 10px; display: flex; align-items: center; justify-content: center; border: 3px dashed var(--accent); border-radius: 14px; background: color-mix(in srgb, var(--accent) 12%, var(--overlay)); color: var(--accent); font-size: clamp(16px, 3vw, 22px); font-weight: 700; z-index: 30; pointer-events: none; }
 
   /* login screen */
@@ -185,7 +188,7 @@
       <input type="file" id="mat-import-file" accept="application/json" multiple hidden>
       <button class="btn btn-accent" id="mat-add-btn" type="button">새 자료 추가</button>
     </div>
-    <p class="drop-hint-text" id="mat-drop-hint" hidden>JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요</p>
+    <div class="dropzone" id="mat-dropzone" tabindex="0" role="button" hidden>JSON 파일을 여기로 끌어다 놓거나 클릭해서 선택하세요</div>
     <div class="cat-filter" id="mat-cat-filter"></div>
     <div id="mat-list"></div>
     <p class="empty" id="mat-empty" hidden>등록된 자료가 없습니다. "새 자료 추가"로 첫 항목을 만들어보세요.</p>
@@ -198,7 +201,7 @@
       <input type="file" id="gl-import-file" accept="application/json" multiple hidden>
       <button class="btn btn-accent" id="gl-add-btn" type="button">새 용어 추가</button>
     </div>
-    <p class="drop-hint-text" id="gl-drop-hint" hidden>JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요</p>
+    <div class="dropzone" id="gl-dropzone" tabindex="0" role="button" hidden>JSON 파일을 여기로 끌어다 놓거나 클릭해서 선택하세요</div>
     <p class="gl-list-lang"><button type="button" class="link-btn" id="gl-list-lang-btn">English list →</button></p>
     <div class="gl-table-wrap">
       <table class="glossary-table">
@@ -269,26 +272,27 @@
   var db = firebase.firestore();
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0 };
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0, newestMaterialBatchId: null };
   var NEW_BADGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // never show NEW once nothing has been added in 7 days
-  var NEW_BADGE_BATCH_MS = 15 * 60 * 1000; // group items added within 15 min of each other as "the same addition"
-  function newestAddedAtAmong(list) {
-    var max = 0;
+  function newBatchId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  // Every material created (single add or JSON import) is stamped with a batchId --
+  // one new id per add action, shared by every item created in that one action.
+  // "NEW" marks only materials whose batchId matches the batch with the latest
+  // addedAt, so adding something newer immediately clears the badge off whatever
+  // was marked NEW before, instead of everything added within some time window.
+  // Materials that predate this feature have no batchId and are never marked NEW.
+  function computeNewestBatch(list) {
+    var maxTime = 0, batchId = null;
     list.forEach(function (m) {
       var t = new Date(m.addedAt).getTime();
-      if (!isNaN(t) && t > max) max = t;
+      if (!isNaN(t) && t > maxTime) { maxTime = t; batchId = m.batchId || null; }
     });
-    return max;
+    return { time: maxTime, batchId: batchId };
   }
-  // "NEW" marks only the most recently added batch (the latest addedAt and anything
-  // within NEW_BADGE_BATCH_MS of it) -- adding something newer clears the badge off
-  // whatever was marked NEW before, rather than everything added in the last N days.
   function isNewBadge(m) {
-    if (!m.addedAt || !state.newestMaterialAddedAt) return false;
-    var t = new Date(m.addedAt).getTime();
-    if (isNaN(t)) return false;
-    if (Date.now() - state.newestMaterialAddedAt > NEW_BADGE_MAX_AGE_MS) return false;
-    return (state.newestMaterialAddedAt - t) <= NEW_BADGE_BATCH_MS;
+    if (!state.newestMaterialBatchId || !m.batchId) return false;
+    if (m.batchId !== state.newestMaterialBatchId) return false;
+    return (Date.now() - state.newestMaterialAddedAt) <= NEW_BADGE_MAX_AGE_MS;
   }
   var lastSyncedNotes = '';
   var unsubMaterials, unsubGlossary, unsubNotes;
@@ -310,10 +314,10 @@
     matAddBtn: document.getElementById('mat-add-btn'),
     matImportBtn: document.getElementById('mat-import-btn'),
     matImportFile: document.getElementById('mat-import-file'),
-    matDropHint: document.getElementById('mat-drop-hint'),
+    matDropzone: document.getElementById('mat-dropzone'),
     glImportBtn: document.getElementById('gl-import-btn'),
     glImportFile: document.getElementById('gl-import-file'),
-    glDropHint: document.getElementById('gl-drop-hint'),
+    glDropzone: document.getElementById('gl-dropzone'),
     dropOverlay: document.getElementById('drop-overlay'),
     glListLangBtn: document.getElementById('gl-list-lang-btn'),
     glThead: document.getElementById('gl-thead'),
@@ -359,7 +363,7 @@
       reportMaterialsLabel: '포함할 학습자료', reportEmpty: '선택할 수 있는 학습자료가 없습니다.', reportExportBtn: '보고서로 내보내기',
       catOther: '기타', catMyNotes: '내 노트', badgeExample: '예시', badgeNew: '신규', catAll: '전체',
       matImportBtn: '자료 가져오기 (JSON)', glImportBtn: '용어 가져오기 (JSON)',
-      dropHintText: 'JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요', dropOverlayText: 'JSON 파일을 놓으면 가져옵니다',
+      dropHintText: 'JSON 파일을 여기로 끌어다 놓거나 클릭해서 선택하세요', dropOverlayText: 'JSON 파일을 놓으면 가져옵니다',
       fieldPrivateOwner: '나(소유자)만 보기 (다른 계정에는 숨김)',
       importDone: '{added}개 추가됨' , importSkipped: ' · {skipped}개는 이미 있어서 건너뜀',
       importBadFile: 'JSON 파일을 읽을 수 없습니다 (형식을 확인해주세요)',
@@ -394,7 +398,7 @@
       reportMaterialsLabel: 'Materials to include', reportEmpty: 'No materials available to select.', reportExportBtn: 'Export report',
       catOther: 'Other', catMyNotes: 'My Notes', badgeExample: 'Example', badgeNew: 'NEW', catAll: 'All',
       matImportBtn: 'Import materials (JSON)', glImportBtn: 'Import terms (JSON)',
-      dropHintText: 'You can also drag & drop a JSON file onto this screen', dropOverlayText: 'Drop to import the JSON file',
+      dropHintText: 'Drag a JSON file here, or click to choose one', dropOverlayText: 'Drop to import the JSON file',
       fieldPrivateOwner: 'Visible to me (owner) only',
       importDone: '{added} added', importSkipped: ' · {skipped} already existed, skipped',
       importBadFile: 'Could not read the JSON file (check its format)',
@@ -518,14 +522,14 @@
     el.matAddBtn.textContent = t('matAddBtn');
     el.matImportBtn.textContent = t('matImportBtn');
     el.matImportBtn.hidden = !state.isOwner;
-    el.matDropHint.textContent = t('dropHintText');
-    el.matDropHint.hidden = !state.isOwner;
+    el.matDropzone.textContent = t('dropHintText');
+    el.matDropzone.hidden = !state.isOwner;
     el.glSearch.placeholder = t('glSearchPh');
     el.glAddBtn.textContent = t('glAddBtn');
     el.glImportBtn.textContent = t('glImportBtn');
     el.glImportBtn.hidden = !state.isOwner;
-    el.glDropHint.textContent = t('dropHintText');
-    el.glDropHint.hidden = !state.isOwner;
+    el.glDropzone.textContent = t('dropHintText');
+    el.glDropzone.hidden = !state.isOwner;
     el.dropOverlay.textContent = t('dropOverlayText');
     el.notesArea.placeholder = t('notesPh');
     el.notesClearBtn.textContent = t('notesClearBtn');
@@ -661,6 +665,7 @@
         if (findDuplicateMaterial(payload.title, plainBody)) { showToast(t('toastDupMaterial')); return false; }
         payload.addedAt = new Date().toISOString();
         payload.isExample = false;
+        payload.batchId = newBatchId();
         return db.collection('materials').add(payload);
       },
     });
@@ -935,6 +940,7 @@
     if (!files.length) { showToast(t('importBadFile')); return; }
     el.matImportBtn.disabled = true;
     var added = 0, skipped = 0, badFiles = 0;
+    var batchId = newBatchId();
     var chain = Promise.resolve();
     files.forEach(function (file) {
       chain = chain.then(function () {
@@ -952,6 +958,7 @@
               return db.collection('materials').add({
                 title: item.title, category: item.category || '기타', body: sanitizeHtml(item.body),
                 bodyIsHtml: bodyIsHtml, addedAt: item.addedAt || new Date().toISOString(), isExample: false,
+                batchId: batchId,
                 visibleToUid: item.visibleToUid || '',
               }).then(function () { added++; });
             });
@@ -1011,7 +1018,12 @@
   el.glImportBtn.addEventListener('click', function () { el.glImportFile.value = ''; el.glImportFile.click(); });
   el.glImportFile.addEventListener('change', function () { importGlossaryFromFiles(el.glImportFile.files); });
 
-  // ---- drag & drop JSON import (anywhere on screen, while on Materials/Glossary tab) ----
+  // ---- drag & drop JSON import ----
+  // The dropzone boxes (#mat-dropzone / #gl-dropzone) are the actual drop targets:
+  // click or drop a file directly on one. The window-level listeners below only show
+  // a full-screen "drop to import" cue while dragging and stop the browser from
+  // navigating away if a file is dropped outside a zone; they never import anything
+  // themselves (the zone's drop handler calls stopPropagation so this never double-fires).
   var dragDepth = 0;
   function dropTargetActive() {
     return state.isOwner && !el.app.hidden && (state.activeTab === 'materials' || state.activeTab === 'glossary');
@@ -1033,11 +1045,27 @@
     e.preventDefault();
     dragDepth = 0;
     el.dropOverlay.hidden = true;
-    if (!dropTargetActive()) return;
-    if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
-    if (state.activeTab === 'materials') importMaterialsFromFiles(e.dataTransfer.files);
-    else importGlossaryFromFiles(e.dataTransfer.files);
   });
+
+  function wireDropzone(zoneEl, fileInputEl, importFn) {
+    zoneEl.addEventListener('click', function () { fileInputEl.value = ''; fileInputEl.click(); });
+    zoneEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputEl.value = ''; fileInputEl.click(); }
+    });
+    zoneEl.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); zoneEl.classList.add('drag-over'); });
+    zoneEl.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); zoneEl.classList.remove('drag-over'); });
+    zoneEl.addEventListener('drop', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      zoneEl.classList.remove('drag-over');
+      dragDepth = 0;
+      el.dropOverlay.hidden = true;
+      if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+      importFn(e.dataTransfer.files);
+    });
+  }
+  wireDropzone(el.matDropzone, el.matImportFile, importMaterialsFromFiles);
+  wireDropzone(el.glDropzone, el.glImportFile, importGlossaryFromFiles);
 
   // ---- auth ----
   el.loginBtn.addEventListener('click', function () {
@@ -1057,7 +1085,9 @@
     unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
       state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.materialsLoaded = true;
-      state.newestMaterialAddedAt = newestAddedAtAmong(visibleMaterials());
+      var nb = computeNewestBatch(visibleMaterials());
+      state.newestMaterialAddedAt = nb.time;
+      state.newestMaterialBatchId = nb.batchId;
       renderMaterials();
       renderReportList();
     }, function (e) { showToast(errMsg(e)); });
