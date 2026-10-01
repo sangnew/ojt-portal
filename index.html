@@ -131,6 +131,8 @@
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); background: var(--ink); color: var(--plate); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; padding: 10px 18px; border-radius: 999px; max-width: calc(100% - 40px); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease; z-index: 20; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
   @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  .drop-hint-text { margin: -10px 0 16px; font-size: 11.5px; color: var(--ink-faint); }
+  .drop-overlay { position: fixed; inset: 10px; display: flex; align-items: center; justify-content: center; border: 3px dashed var(--accent); border-radius: 14px; background: color-mix(in srgb, var(--accent) 12%, var(--overlay)); color: var(--accent); font-size: clamp(16px, 3vw, 22px); font-weight: 700; z-index: 30; pointer-events: none; }
 
   /* login screen */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -180,9 +182,10 @@
     <div class="panel-head">
       <input class="search" id="mat-search" type="text" placeholder="자료 검색…">
       <button class="btn btn-ghost" id="mat-import-btn" type="button" hidden>자료 가져오기 (JSON)</button>
-      <input type="file" id="mat-import-file" accept="application/json" hidden>
+      <input type="file" id="mat-import-file" accept="application/json" multiple hidden>
       <button class="btn btn-accent" id="mat-add-btn" type="button">새 자료 추가</button>
     </div>
+    <p class="drop-hint-text" id="mat-drop-hint" hidden>JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요</p>
     <div class="cat-filter" id="mat-cat-filter"></div>
     <div id="mat-list"></div>
     <p class="empty" id="mat-empty" hidden>등록된 자료가 없습니다. "새 자료 추가"로 첫 항목을 만들어보세요.</p>
@@ -192,9 +195,10 @@
     <div class="panel-head">
       <input class="search" id="gl-search" type="text" placeholder="용어 검색…">
       <button class="btn btn-ghost" id="gl-import-btn" type="button" hidden>용어 가져오기 (JSON)</button>
-      <input type="file" id="gl-import-file" accept="application/json" hidden>
+      <input type="file" id="gl-import-file" accept="application/json" multiple hidden>
       <button class="btn btn-accent" id="gl-add-btn" type="button">새 용어 추가</button>
     </div>
+    <p class="drop-hint-text" id="gl-drop-hint" hidden>JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요</p>
     <p class="gl-list-lang"><button type="button" class="link-btn" id="gl-list-lang-btn">English list →</button></p>
     <div class="gl-table-wrap">
       <table class="glossary-table">
@@ -243,6 +247,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="drop-overlay" id="drop-overlay" hidden>JSON 파일을 놓으면 가져옵니다</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -264,7 +269,7 @@
   var db = firebase.firestore();
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr' };
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials' };
   var NEW_BADGE_DAYS = 7;
   function isRecentlyAdded(iso) {
     if (!iso) return false;
@@ -292,8 +297,11 @@
     matAddBtn: document.getElementById('mat-add-btn'),
     matImportBtn: document.getElementById('mat-import-btn'),
     matImportFile: document.getElementById('mat-import-file'),
+    matDropHint: document.getElementById('mat-drop-hint'),
     glImportBtn: document.getElementById('gl-import-btn'),
     glImportFile: document.getElementById('gl-import-file'),
+    glDropHint: document.getElementById('gl-drop-hint'),
+    dropOverlay: document.getElementById('drop-overlay'),
     glListLangBtn: document.getElementById('gl-list-lang-btn'),
     glThead: document.getElementById('gl-thead'),
     glList: document.getElementById('gl-list'),
@@ -338,9 +346,11 @@
       reportMaterialsLabel: '포함할 학습자료', reportEmpty: '선택할 수 있는 학습자료가 없습니다.', reportExportBtn: '보고서로 내보내기',
       catOther: '기타', catMyNotes: '내 노트', badgeExample: '예시', badgeNew: '신규', catAll: '전체',
       matImportBtn: '자료 가져오기 (JSON)', glImportBtn: '용어 가져오기 (JSON)',
+      dropHintText: 'JSON 파일을 이 화면에 끌어다 놓아도 가져올 수 있어요', dropOverlayText: 'JSON 파일을 놓으면 가져옵니다',
       fieldPrivateOwner: '나(소유자)만 보기 (다른 계정에는 숨김)',
       importDone: '{added}개 추가됨' , importSkipped: ' · {skipped}개는 이미 있어서 건너뜀',
       importBadFile: 'JSON 파일을 읽을 수 없습니다 (형식을 확인해주세요)',
+      importBadFileCount: ' · {count}개 파일은 읽지 못했습니다',
       matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
       matCategoryPh: '예: 품질, 공정관리, 용접', richtextPh: '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)',
       btnCancel: '취소', btnSave: '저장', btnDelete: '삭제', btnClose: '닫기', btnEdit: '수정',
@@ -371,9 +381,11 @@
       reportMaterialsLabel: 'Materials to include', reportEmpty: 'No materials available to select.', reportExportBtn: 'Export report',
       catOther: 'Other', catMyNotes: 'My Notes', badgeExample: 'Example', badgeNew: 'NEW', catAll: 'All',
       matImportBtn: 'Import materials (JSON)', glImportBtn: 'Import terms (JSON)',
+      dropHintText: 'You can also drag & drop a JSON file onto this screen', dropOverlayText: 'Drop to import the JSON file',
       fieldPrivateOwner: 'Visible to me (owner) only',
       importDone: '{added} added', importSkipped: ' · {skipped} already existed, skipped',
       importBadFile: 'Could not read the JSON file (check its format)',
+      importBadFileCount: ' · {count} file(s) could not be read',
       matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
       matCategoryPh: 'e.g. Quality, Process, Welding', richtextPh: 'You can paste rich text — bold/lists/tables are preserved',
       btnCancel: 'Cancel', btnSave: 'Save', btnDelete: 'Delete', btnClose: 'Close', btnEdit: 'Edit',
@@ -474,6 +486,7 @@
   }
 
   function switchTab(name) {
+    state.activeTab = name;
     Object.keys(el.panels).forEach(function (k) { el.panels[k].hidden = (k !== name); });
     el.tabs.forEach(function (btn) { btn.setAttribute('aria-selected', btn.dataset.tab === name ? 'true' : 'false'); });
   }
@@ -492,10 +505,15 @@
     el.matAddBtn.textContent = t('matAddBtn');
     el.matImportBtn.textContent = t('matImportBtn');
     el.matImportBtn.hidden = !state.isOwner;
+    el.matDropHint.textContent = t('dropHintText');
+    el.matDropHint.hidden = !state.isOwner;
     el.glSearch.placeholder = t('glSearchPh');
     el.glAddBtn.textContent = t('glAddBtn');
     el.glImportBtn.textContent = t('glImportBtn');
     el.glImportBtn.hidden = !state.isOwner;
+    el.glDropHint.textContent = t('dropHintText');
+    el.glDropHint.hidden = !state.isOwner;
+    el.dropOverlay.textContent = t('dropOverlayText');
     el.notesArea.placeholder = t('notesPh');
     el.notesClearBtn.textContent = t('notesClearBtn');
     el.notesExportBtn.textContent = t('notesExportBtn');
@@ -889,73 +907,123 @@
   el.glSearch.addEventListener('input', function () { state.glQuery = el.glSearch.value; renderGlossary(); });
   el.matAddBtn.addEventListener('click', function () { openMaterialForm(null); });
 
-  el.matImportBtn.addEventListener('click', function () { el.matImportFile.value = ''; el.matImportFile.click(); });
-  el.matImportFile.addEventListener('change', function () {
-    var file = el.matImportFile.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      var items;
-      try { items = JSON.parse(reader.result); } catch (e) { showToast(t('importBadFile')); return; }
-      if (!Array.isArray(items)) { showToast(t('importBadFile')); return; }
-      el.matImportBtn.disabled = true;
-      var added = 0, skipped = 0;
-      var chain = Promise.resolve();
-      items.forEach(function (item) {
-        chain = chain.then(function () {
-          if (!item || !item.title || !item.body) { skipped++; return; }
-          var bodyIsHtml = item.bodyIsHtml !== false;
-          var plainBody = bodyIsHtml ? stripTags(item.body) : item.body;
-          if (findDuplicateMaterial(item.title, plainBody)) { skipped++; return; }
-          return db.collection('materials').add({
-            title: item.title, category: item.category || '기타', body: sanitizeHtml(item.body),
-            bodyIsHtml: bodyIsHtml, addedAt: item.addedAt || new Date().toISOString(), isExample: false,
-            visibleToUid: item.visibleToUid || '',
-          }).then(function () { added++; });
-        });
+  function readFileAsText(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsText(file);
+    });
+  }
+  function isJsonFile(file) { return file && (/\.json$/i.test(file.name) || file.type === 'application/json'); }
+
+  function importMaterialsFromFiles(fileList) {
+    var files = Array.prototype.filter.call(fileList || [], isJsonFile);
+    if (!files.length) { showToast(t('importBadFile')); return; }
+    el.matImportBtn.disabled = true;
+    var added = 0, skipped = 0, badFiles = 0;
+    var chain = Promise.resolve();
+    files.forEach(function (file) {
+      chain = chain.then(function () {
+        return readFileAsText(file).then(function (text) {
+          var items;
+          try { items = JSON.parse(text); } catch (e) { badFiles++; return; }
+          if (!Array.isArray(items)) { badFiles++; return; }
+          var inner = Promise.resolve();
+          items.forEach(function (item) {
+            inner = inner.then(function () {
+              if (!item || !item.title || !item.body) { skipped++; return; }
+              var bodyIsHtml = item.bodyIsHtml !== false;
+              var plainBody = bodyIsHtml ? stripTags(item.body) : item.body;
+              if (findDuplicateMaterial(item.title, plainBody)) { skipped++; return; }
+              return db.collection('materials').add({
+                title: item.title, category: item.category || '기타', body: sanitizeHtml(item.body),
+                bodyIsHtml: bodyIsHtml, addedAt: item.addedAt || new Date().toISOString(), isExample: false,
+                visibleToUid: item.visibleToUid || '',
+              }).then(function () { added++; });
+            });
+          });
+          return inner;
+        }).catch(function () { badFiles++; });
       });
-      chain.then(function () {
-        el.matImportBtn.disabled = false;
-        var msg = t('importDone').replace('{added}', added);
-        if (skipped) msg += t('importSkipped').replace('{skipped}', skipped);
-        showToast(msg);
-      }).catch(function (e) { el.matImportBtn.disabled = false; showToast(errMsg(e)); });
-    };
-    reader.readAsText(file);
-  });
+    });
+    chain.then(function () {
+      el.matImportBtn.disabled = false;
+      var msg = t('importDone').replace('{added}', added);
+      if (skipped) msg += t('importSkipped').replace('{skipped}', skipped);
+      if (badFiles) msg += t('importBadFileCount').replace('{count}', badFiles);
+      showToast(msg);
+    });
+  }
+  el.matImportBtn.addEventListener('click', function () { el.matImportFile.value = ''; el.matImportFile.click(); });
+  el.matImportFile.addEventListener('change', function () { importMaterialsFromFiles(el.matImportFile.files); });
   el.glAddBtn.addEventListener('click', function () { openGlossaryForm(null); });
 
-  el.glImportBtn.addEventListener('click', function () { el.glImportFile.value = ''; el.glImportFile.click(); });
-  el.glImportFile.addEventListener('change', function () {
-    var file = el.glImportFile.files[0];
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function () {
-      var items;
-      try { items = JSON.parse(reader.result); } catch (e) { showToast(t('importBadFile')); return; }
-      if (!Array.isArray(items)) { showToast(t('importBadFile')); return; }
-      el.glImportBtn.disabled = true;
-      var added = 0, skipped = 0;
-      var chain = Promise.resolve();
-      items.forEach(function (item) {
-        chain = chain.then(function () {
-          if (!item || (!item.term_kr && !item.term_en)) { skipped++; return; }
-          if (findDuplicateGlossary(item.term_kr || '', item.term_en || '', item.definition || '')) { skipped++; return; }
-          return db.collection('glossary').add({
-            term_kr: item.term_kr || '', term_en: item.term_en || '', department: item.department || '',
-            definition: item.definition || '', definition_en: item.definition_en || '', calc: item.calc || '', important: !!item.important,
-            addedAt: item.addedAt || new Date().toISOString(), isExample: false,
-          }).then(function () { added++; });
-        });
+  function importGlossaryFromFiles(fileList) {
+    var files = Array.prototype.filter.call(fileList || [], isJsonFile);
+    if (!files.length) { showToast(t('importBadFile')); return; }
+    el.glImportBtn.disabled = true;
+    var added = 0, skipped = 0, badFiles = 0;
+    var chain = Promise.resolve();
+    files.forEach(function (file) {
+      chain = chain.then(function () {
+        return readFileAsText(file).then(function (text) {
+          var items;
+          try { items = JSON.parse(text); } catch (e) { badFiles++; return; }
+          if (!Array.isArray(items)) { badFiles++; return; }
+          var inner = Promise.resolve();
+          items.forEach(function (item) {
+            inner = inner.then(function () {
+              if (!item || (!item.term_kr && !item.term_en)) { skipped++; return; }
+              if (findDuplicateGlossary(item.term_kr || '', item.term_en || '', item.definition || '')) { skipped++; return; }
+              return db.collection('glossary').add({
+                term_kr: item.term_kr || '', term_en: item.term_en || '', department: item.department || '',
+                definition: item.definition || '', definition_en: item.definition_en || '', calc: item.calc || '', important: !!item.important,
+                addedAt: item.addedAt || new Date().toISOString(), isExample: false,
+              }).then(function () { added++; });
+            });
+          });
+          return inner;
+        }).catch(function () { badFiles++; });
       });
-      chain.then(function () {
-        el.glImportBtn.disabled = false;
-        var msg = t('importDone').replace('{added}', added);
-        if (skipped) msg += t('importSkipped').replace('{skipped}', skipped);
-        showToast(msg);
-      }).catch(function (e) { el.glImportBtn.disabled = false; showToast(errMsg(e)); });
-    };
-    reader.readAsText(file);
+    });
+    chain.then(function () {
+      el.glImportBtn.disabled = false;
+      var msg = t('importDone').replace('{added}', added);
+      if (skipped) msg += t('importSkipped').replace('{skipped}', skipped);
+      if (badFiles) msg += t('importBadFileCount').replace('{count}', badFiles);
+      showToast(msg);
+    });
+  }
+  el.glImportBtn.addEventListener('click', function () { el.glImportFile.value = ''; el.glImportFile.click(); });
+  el.glImportFile.addEventListener('change', function () { importGlossaryFromFiles(el.glImportFile.files); });
+
+  // ---- drag & drop JSON import (anywhere on screen, while on Materials/Glossary tab) ----
+  var dragDepth = 0;
+  function dropTargetActive() {
+    return state.isOwner && !el.app.hidden && (state.activeTab === 'materials' || state.activeTab === 'glossary');
+  }
+  window.addEventListener('dragenter', function (e) {
+    e.preventDefault();
+    if (!dropTargetActive()) return;
+    dragDepth++;
+    el.dropOverlay.hidden = false;
+  });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('dragleave', function (e) {
+    e.preventDefault();
+    if (!dropTargetActive()) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) el.dropOverlay.hidden = true;
+  });
+  window.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dragDepth = 0;
+    el.dropOverlay.hidden = true;
+    if (!dropTargetActive()) return;
+    if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    if (state.activeTab === 'materials') importMaterialsFromFiles(e.dataTransfer.files);
+    else importGlossaryFromFiles(e.dataTransfer.files);
   });
 
   // ---- auth ----
