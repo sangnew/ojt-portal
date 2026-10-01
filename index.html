@@ -269,13 +269,26 @@
   var db = firebase.firestore();
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials' };
-  var NEW_BADGE_DAYS = 7;
-  function isRecentlyAdded(iso) {
-    if (!iso) return false;
-    var t = new Date(iso).getTime();
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0 };
+  var NEW_BADGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // never show NEW once nothing has been added in 7 days
+  var NEW_BADGE_BATCH_MS = 15 * 60 * 1000; // group items added within 15 min of each other as "the same addition"
+  function newestAddedAtAmong(list) {
+    var max = 0;
+    list.forEach(function (m) {
+      var t = new Date(m.addedAt).getTime();
+      if (!isNaN(t) && t > max) max = t;
+    });
+    return max;
+  }
+  // "NEW" marks only the most recently added batch (the latest addedAt and anything
+  // within NEW_BADGE_BATCH_MS of it) -- adding something newer clears the badge off
+  // whatever was marked NEW before, rather than everything added in the last N days.
+  function isNewBadge(m) {
+    if (!m.addedAt || !state.newestMaterialAddedAt) return false;
+    var t = new Date(m.addedAt).getTime();
     if (isNaN(t)) return false;
-    return (Date.now() - t) <= NEW_BADGE_DAYS * 24 * 60 * 60 * 1000;
+    if (Date.now() - state.newestMaterialAddedAt > NEW_BADGE_MAX_AGE_MS) return false;
+    return (state.newestMaterialAddedAt - t) <= NEW_BADGE_BATCH_MS;
   }
   var lastSyncedNotes = '';
   var unsubMaterials, unsubGlossary, unsubNotes;
@@ -655,7 +668,7 @@
   function openMaterialDetail(m) {
     openDetail({
       title: m.title,
-      meta: displayCategory(m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (isRecentlyAdded(m.addedAt) ? ' · ' + t('badgeNew') : '') + (m.isExample ? ' · ' + t('badgeExample') : '') + (m.visibleToUid ? ' · 🔒 ' + t('fieldPrivateOwner') : ''),
+      meta: displayCategory(m.category || '기타') + (m.addedAt ? ' · ' + fmtDate(m.addedAt) : '') + (isNewBadge(m) ? ' · ' + t('badgeNew') : '') + (m.isExample ? ' · ' + t('badgeExample') : '') + (m.visibleToUid ? ' · 🔒 ' + t('fieldPrivateOwner') : ''),
       body: m.body || '',
       bodyIsHtml: !!m.bodyIsHtml,
       onEdit: function () { openMaterialForm(m); },
@@ -705,7 +718,7 @@
         html += '<div class="cat-label">' + escapeHtml(displayCategory(cat)) + '</div><div class="mat-grid">';
         groups[cat].sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'ko'); }).forEach(function (m) {
           var snipSrc = matPlain(m);
-          html += '<button class="mat-card" data-id="' + m.id + '">' + (isRecentlyAdded(m.addedAt) ? '<span class="badge badge-new">' + escapeHtml(t('badgeNew')) + '</span>' : '') + (m.isExample ? '<span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + (m.visibleToUid ? '<span class="badge">🔒</span>' : '') +
+          html += '<button class="mat-card" data-id="' + m.id + '">' + (isNewBadge(m) ? '<span class="badge badge-new">' + escapeHtml(t('badgeNew')) + '</span>' : '') + (m.isExample ? '<span class="badge">' + escapeHtml(t('badgeExample')) + '</span>' : '') + (m.visibleToUid ? '<span class="badge">🔒</span>' : '') +
             '<span class="mat-card-title">' + escapeHtml(m.title) + '</span>' +
             '<span class="mat-card-snip">' + escapeHtml(snipSrc.slice(0, 72)) + (snipSrc.length > 72 ? '…' : '') + '</span></button>';
         });
@@ -1044,6 +1057,7 @@
     unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
       state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.materialsLoaded = true;
+      state.newestMaterialAddedAt = newestAddedAtAmong(visibleMaterials());
       renderMaterials();
       renderReportList();
     }, function (e) { showToast(errMsg(e)); });
