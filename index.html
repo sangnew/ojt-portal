@@ -100,8 +100,15 @@
   #notes-status { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px; color: var(--ink-faint); }
   .notes-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+  .overlay.overlay-fullpage { padding: 0; background: var(--bg); }
   .modal { width: 100%; max-width: 480px; max-height: 86vh; overflow-y: auto; background: var(--plate); border: 1px solid var(--plate-edge); border-radius: 10px; box-shadow: 0 24px 50px -20px var(--shadow); padding: 22px 22px 20px; }
   .modal.modal-large { max-width: min(980px, 96vw); max-height: 94vh; }
+  .modal.modal-fullpage { width: 100%; max-width: none; height: 100%; max-height: none; border: none; border-radius: 0; box-shadow: none; background: var(--bg); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .modal.modal-fullpage > h2 { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .detail-page-bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--plate-edge); background: var(--plate); flex: none; }
+  .detail-page-scroll { flex: 1; overflow-y: auto; }
+  .detail-page-inner { max-width: 760px; margin: 0 auto; padding: 32px 24px 80px; }
+  .detail-page-inner h1 { margin: 0 0 10px; font-size: clamp(20px, 3vw, 27px); font-weight: 700; text-wrap: balance; }
   .modal h2 { margin: 0 0 16px; font-size: 17px; font-weight: 700; text-wrap: balance; }
   .f-label { display: block; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin: 14px 0 6px; }
   .f-label:first-child { margin-top: 0; }
@@ -370,7 +377,7 @@
       importBadFileCount: ' · {count}개 파일은 읽지 못했습니다',
       matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
       matCategoryPh: '예: 품질, 공정관리, 용접', richtextPh: '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)',
-      btnCancel: '취소', btnSave: '저장', btnDelete: '삭제', btnClose: '닫기', btnEdit: '수정',
+      btnCancel: '취소', btnSave: '저장', btnDelete: '삭제', btnClose: '닫기', btnEdit: '수정', btnBackToList: '← 목록으로',
       toastSaved: '저장되었습니다', toastDeleted: '삭제되었습니다', toastTitleRequired: '제목을 입력해주세요',
       toastDupMaterial: '이미 저장된 자료입니다',
       errPermission: '권한이 없습니다', errCode: '오류 ({code})', errGeneric: '오류가 발생했습니다',
@@ -405,7 +412,7 @@
       importBadFileCount: ' · {count} file(s) could not be read',
       matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
       matCategoryPh: 'e.g. Quality, Process, Welding', richtextPh: 'You can paste rich text — bold/lists/tables are preserved',
-      btnCancel: 'Cancel', btnSave: 'Save', btnDelete: 'Delete', btnClose: 'Close', btnEdit: 'Edit',
+      btnCancel: 'Cancel', btnSave: 'Save', btnDelete: 'Delete', btnClose: 'Close', btnEdit: 'Edit', btnBackToList: '← Back to list',
       toastSaved: 'Saved', toastDeleted: 'Deleted', toastTitleRequired: 'Please enter a title',
       toastDupMaterial: 'This material is already saved',
       errPermission: 'Permission denied', errCode: 'Error ({code})', errGeneric: 'An error occurred',
@@ -551,7 +558,7 @@
     applyLang();
   });
 
-  function closeModal() { el.overlay.hidden = true; el.modalBody.innerHTML = ''; el.modal.classList.remove('modal-large'); }
+  function closeModal() { el.overlay.hidden = true; el.modalBody.innerHTML = ''; el.modal.classList.remove('modal-large', 'modal-fullpage'); el.overlay.classList.remove('overlay-fullpage'); }
   var overlayMousedownOnSelf = false;
   el.overlay.addEventListener('mousedown', function (e) { overlayMousedownOnSelf = (e.target === el.overlay); });
   el.overlay.addEventListener('click', function (e) { if (e.target === el.overlay && overlayMousedownOnSelf) closeModal(); overlayMousedownOnSelf = false; });
@@ -626,12 +633,18 @@
     var bodyMarkup = opts.bodyIsHtml
       ? '<div class="detail-body detail-body-rich">' + sanitizeHtml(opts.body) + '</div>'
       : '<p class="detail-body">' + escapeHtml(opts.body) + '</p>';
-    el.modalBody.innerHTML = '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
+    el.modalBody.innerHTML =
+      '<div class="detail-page-bar">' +
+      '<button type="button" class="btn btn-ghost" id="f-close">' + escapeHtml(t('btnBackToList')) + '</button>' +
+      '<button type="button" class="btn btn-accent" id="f-edit">' + escapeHtml(t('btnEdit')) + '</button>' +
+      '</div>' +
+      '<div class="detail-page-scroll"><div class="detail-page-inner">' +
+      '<h1>' + escapeHtml(opts.title) + '</h1>' +
+      '<p class="detail-meta">' + escapeHtml(opts.meta) + '</p>' +
       bodyMarkup +
-      '<div class="f-actions"><span></span><div class="f-actions-right">' +
-      '<button type="button" class="btn btn-ghost" id="f-close">' + escapeHtml(t('btnClose')) + '</button>' +
-      '<button type="button" class="btn btn-accent" id="f-edit">' + escapeHtml(t('btnEdit')) + '</button></div></div>';
-    el.modal.classList.add('modal-large');
+      '</div></div>';
+    el.modal.classList.add('modal-fullpage');
+    el.overlay.classList.add('overlay-fullpage');
     el.overlay.hidden = false;
     document.getElementById('f-close').addEventListener('click', closeModal);
     document.getElementById('f-edit').addEventListener('click', function () { closeModal(); opts.onEdit(); });
