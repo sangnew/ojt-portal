@@ -289,7 +289,7 @@
   db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true });
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
-  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0, newestMaterialBatchId: null };
+  var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0, newestMaterialBatchId: null, connectionSlow: false };
   var NEW_BADGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // never show NEW once nothing has been added in 7 days
   function newBatchId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   // Every material created (single add or JSON import) is stamped with a batchId --
@@ -372,7 +372,7 @@
       tabMaterials: '학습자료', tabGlossary: '용어집', tabNotes: '노트', tabReport: '보고서', langToggle: 'Eng. Version',
       matSearchPh: '자료 검색…', matAddBtn: '새 자료 추가', matEmpty: '등록된 자료가 없습니다. "새 자료 추가"로 첫 항목을 만들어보세요.',
       glSearchPh: '용어 검색…', glAddBtn: '새 용어 추가', glEmpty: '등록된 용어가 없습니다.',
-      noResults: '검색 결과가 없습니다.', loading: '불러오는 중…', renderError: '화면 렌더링 오류: ',
+      noResults: '검색 결과가 없습니다.', loading: '불러오는 중…', loadingSlow: '불러오는 중… (사내망 연결이 느립니다. 잠시만 기다려주세요)', renderError: '화면 렌더링 오류: ',
       notesPh: '오늘 배운 내용, 궁금한 점을 자유롭게 적어보세요. 다른 기기에서도 그대로 이어집니다.',
       notesWaiting: '동기화 대기 중…', notesSaving: '저장 중…', notesSaved: '저장됨 · ', notesSynced: '동기화됨 · ',
       notesClearBtn: '지우기', notesExportBtn: '텍스트로 내보내기', notesSaveMaterialBtn: '학습자료로 저장',
@@ -407,7 +407,7 @@
       tabMaterials: 'Materials', tabGlossary: 'Glossary', tabNotes: 'Notes', tabReport: 'Report', langToggle: '한국어',
       matSearchPh: 'Search materials…', matAddBtn: 'Add material', matEmpty: 'No materials yet. Use "Add material" to create your first one.',
       glSearchPh: 'Search terms…', glAddBtn: 'Add term', glEmpty: 'No terms yet.',
-      noResults: 'No results found.', loading: 'Loading…', renderError: 'Render error: ',
+      noResults: 'No results found.', loading: 'Loading…', loadingSlow: 'Loading… (the office network connection is slow -- please wait)', renderError: 'Render error: ',
       notesPh: 'Jot down what you learned today or any questions — it stays in sync across your devices.',
       notesWaiting: 'Waiting to sync…', notesSaving: 'Saving…', notesSaved: 'Saved · ', notesSynced: 'Synced · ',
       notesClearBtn: 'Clear', notesExportBtn: 'Export as text', notesSaveMaterialBtn: 'Save as material',
@@ -747,7 +747,7 @@
     });
   }
   function renderMaterials() {
-    if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">' + escapeHtml(t('loading')) + '</p>'; return; }
+    if (!state.materialsLoaded) { el.matEmpty.hidden = true; el.matList.innerHTML = '<p class="empty">' + escapeHtml(t(state.connectionSlow ? 'loadingSlow' : 'loading')) + '</p>'; return; }
     try {
       var visible = visibleMaterials();
       renderCategoryFilter(visible);
@@ -860,7 +860,7 @@
     el.glThead.innerHTML = '<th class="gl-star-cell"></th>' + (isEn
       ? '<th class="gl-term-en-cell">' + escapeHtml(t('colEn')) + '</th><th class="gl-dept-cell">' + escapeHtml(t('colDept')) + '</th><th class="gl-def-cell">' + escapeHtml(t('colDef')) + '</th>'
       : '<th class="gl-term-kr-cell">' + escapeHtml(t('colKr')) + '</th><th class="gl-term-en-cell">' + escapeHtml(t('colEn')) + '</th><th class="gl-dept-cell">' + escapeHtml(t('colDept')) + '</th><th class="gl-def-cell">' + escapeHtml(t('colDef')) + '</th>');
-    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<tr><td colspan="5" class="empty">' + escapeHtml(t('loading')) + '</td></tr>'; return; }
+    if (!state.glossaryLoaded) { el.glEmpty.hidden = true; el.glList.innerHTML = '<tr><td colspan="5" class="empty">' + escapeHtml(t(state.connectionSlow ? 'loadingSlow' : 'loading')) + '</td></tr>'; return; }
     var q = state.glQuery.trim().toLowerCase();
     function termKr(g) { return g.term_kr != null ? g.term_kr : g.term; }
     var base = isEn ? state.glossary.filter(function (g) { return !!(g.term_en || '').trim(); }) : state.glossary;
@@ -1129,6 +1129,13 @@
   el.signoutBtn.addEventListener('click', function () { auth.signOut(); });
 
   function subscribe() {
+    setTimeout(function () {
+      if (state.materialsLoaded && state.glossaryLoaded) return;
+      state.connectionSlow = true;
+      if (!state.materialsLoaded) renderMaterials();
+      if (!state.glossaryLoaded) renderGlossary();
+    }, 12000);
+
     unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
       // An empty snapshot served purely from local cache (no server contact yet)
       // doesn't mean the collection is actually empty -- it just means Firestore
