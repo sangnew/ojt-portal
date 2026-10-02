@@ -1128,6 +1128,26 @@
   el.loginPw.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.loginBtn.click(); });
   el.signoutBtn.addEventListener('click', function () { auth.signOut(); });
 
+  function applyMaterialsSnapshot(snap) {
+    // An empty snapshot served purely from local cache (no server contact yet)
+    // doesn't mean the collection is actually empty -- it just means Firestore
+    // hasn't reached the backend yet (slow/corporate network). Wait for either
+    // real data or a server-confirmed empty result before declaring "no data".
+    if (snap.empty && snap.metadata && snap.metadata.fromCache) return;
+    state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
+    state.materialsLoaded = true;
+    var nb = computeNewestBatch(visibleMaterials());
+    state.newestMaterialAddedAt = nb.time;
+    state.newestMaterialBatchId = nb.batchId;
+    renderMaterials();
+    renderReportList();
+  }
+  function applyGlossarySnapshot(snap) {
+    if (snap.empty && snap.metadata && snap.metadata.fromCache) return;
+    state.glossary = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
+    state.glossaryLoaded = true;
+    renderGlossary();
+  }
   function subscribe() {
     setTimeout(function () {
       if (state.materialsLoaded && state.glossaryLoaded) return;
@@ -1136,27 +1156,16 @@
       if (!state.glossaryLoaded) renderGlossary();
     }, 12000);
 
-    unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
-      // An empty snapshot served purely from local cache (no server contact yet)
-      // doesn't mean the collection is actually empty -- it just means Firestore
-      // hasn't reached the backend yet (slow/corporate network). Wait for either
-      // real data or a server-confirmed empty result before declaring "no data".
-      if (snap.empty && snap.metadata.fromCache) return;
-      state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
-      state.materialsLoaded = true;
-      var nb = computeNewestBatch(visibleMaterials());
-      state.newestMaterialAddedAt = nb.time;
-      state.newestMaterialBatchId = nb.batchId;
-      renderMaterials();
-      renderReportList();
-    }, function (e) { showToast(errMsg(e)); });
+    // A one-shot get() is a plain request/response, unlike onSnapshot which needs
+    // a long-lived streaming channel -- far more reliable on networks (like this
+    // one) where a proxy/firewall keeps resetting long-lived connections. It's a
+    // fast path to initial data; onSnapshot below still drives live updates for
+    // whichever viewer's channel manages to stay up.
+    db.collection('materials').get({ source: 'server' }).then(applyMaterialsSnapshot).catch(function () {});
+    db.collection('glossary').get({ source: 'server' }).then(applyGlossarySnapshot).catch(function () {});
 
-    unsubGlossary = db.collection('glossary').onSnapshot(function (snap) {
-      if (snap.empty && snap.metadata.fromCache) return;
-      state.glossary = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
-      state.glossaryLoaded = true;
-      renderGlossary();
-    }, function (e) { showToast(errMsg(e)); });
+    unsubMaterials = db.collection('materials').onSnapshot(applyMaterialsSnapshot, function (e) { showToast(errMsg(e)); });
+    unsubGlossary = db.collection('glossary').onSnapshot(applyGlossarySnapshot, function (e) { showToast(errMsg(e)); });
 
     unsubNotes = db.doc('notes/current').onSnapshot(function (snap) {
       var data = snap.data() || {};
