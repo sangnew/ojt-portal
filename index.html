@@ -286,7 +286,7 @@
   // surfaces as repeated "Could not reach Cloud Firestore backend" errors. Forcing
   // plain long-polling skips the streaming negotiation and is far more reliable
   // on networks like that.
-  db.settings({ experimentalForceLongPolling: true, merge: true });
+  db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true });
 
   var OWNER_UID = 'VN50wXvZEkYqFOYiiOOrIejjRgG2';
   var state = { materials: [], glossary: [], matQuery: '', glQuery: '', matCategoryFilter: '', materialsLoaded: false, glossaryLoaded: false, isOwner: false, glListLang: 'kr', activeTab: 'materials', newestMaterialAddedAt: 0, newestMaterialBatchId: null };
