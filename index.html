@@ -137,6 +137,8 @@
   .detail-body-rich table { border-collapse: collapse; max-width: 100%; }
   .detail-body-rich td, .detail-body-rich th { border: 1px solid var(--plate-edge); padding: 5px 9px; }
   .detail-body-rich a { color: var(--accent); }
+  .detail-body-rich img, .f-richtext img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin: 8px 0; }
+  .f-img-btn { margin-top: 6px; }
   .report-list { border-top: 1px solid var(--plate-edge); margin-bottom: 20px; }
   .report-row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--plate-edge); }
   .report-row input[type="checkbox"] { margin-top: 3px; flex: none; }
@@ -389,6 +391,7 @@
       importBadFileCount: ' · {count}개 파일은 읽지 못했습니다',
       matFormAdd: '새 자료 추가', matFormEdit: '자료 수정', fieldTitle: '제목', fieldCategory: '카테고리', fieldContent: '내용',
       matCategoryPh: '예: 품질, 공정관리, 용접', richtextPh: '서식 있는 텍스트를 붙여넣어도 됩니다 (굵게/목록/표 등 유지)',
+      imgAddBtn: '📷 사진 추가', toastImgTooLarge: '이미지가 너무 커서 추가하지 못했습니다 (더 작은 사진을 사용해주세요)', toastImgReadError: '이미지를 읽지 못했습니다',
       btnCancel: '취소', btnSave: '저장', btnDelete: '삭제', btnClose: '닫기', btnEdit: '수정', btnBackToList: '← 목록으로',
       toastSaved: '저장되었습니다', toastDeleted: '삭제되었습니다', toastTitleRequired: '제목을 입력해주세요',
       toastDupMaterial: '이미 저장된 자료입니다',
@@ -424,6 +427,7 @@
       importBadFileCount: ' · {count} file(s) could not be read',
       matFormAdd: 'Add material', matFormEdit: 'Edit material', fieldTitle: 'Title', fieldCategory: 'Category', fieldContent: 'Content',
       matCategoryPh: 'e.g. Quality, Process, Welding', richtextPh: 'You can paste rich text — bold/lists/tables are preserved',
+      imgAddBtn: '📷 Add photo', toastImgTooLarge: 'Image is too large to add (please use a smaller photo)', toastImgReadError: 'Could not read the image',
       btnCancel: 'Cancel', btnSave: 'Save', btnDelete: 'Delete', btnClose: 'Close', btnEdit: 'Edit', btnBackToList: '← Back to list',
       toastSaved: 'Saved', toastDeleted: 'Deleted', toastTitleRequired: 'Please enter a title',
       toastDupMaterial: 'This material is already saved',
@@ -458,12 +462,17 @@
   // material body field and when rendering it back out, so formatting
   // (bold/headings/lists/tables) survives copy-paste without allowing
   // scripts or event-handler attributes through.
-  var SAN_ALLOWED_TAGS = { P: 1, BR: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, BLOCKQUOTE: 1, CODE: 1, PRE: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TD: 1, TH: 1, A: 1, SPAN: 1, DIV: 1, HR: 1 };
+  var SAN_ALLOWED_TAGS = { P: 1, BR: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, BLOCKQUOTE: 1, CODE: 1, PRE: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TD: 1, TH: 1, A: 1, SPAN: 1, DIV: 1, HR: 1, IMG: 1 };
   var SAN_DROP_TAGS = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, SVG: 1, LINK: 1, META: 1 };
   var SAN_ALLOWED_ATTRS = {
     A: ['href'], TD: ['colspan', 'rowspan', 'style'], TH: ['colspan', 'rowspan', 'style'],
     TABLE: ['style'], TR: ['style'], DIV: ['style'], SPAN: ['style'], P: ['style'],
+    IMG: ['src', 'alt', 'style'],
   };
+  // Images are only ever allowed as embedded base64 data URIs (the app's own
+  // upload/paste flow produces these) -- never a remote http(s) src, which would
+  // let a pasted/imported img tag act as a tracking pixel or load arbitrary content.
+  var SAN_IMG_SRC_RE = /^data:image\/(png|jpe?g|gif|webp);base64,/i;
   // Small whitelist of layout/color CSS props -- enough for a colored table (e.g. a
   // swimlane diagram) without allowing url()/expression()/behavior-based attacks.
   var SAN_STYLE_PROPS = { background: 1, 'background-color': 1, color: 1, 'font-weight': 1, 'text-align': 1, 'vertical-align': 1, padding: 1, border: 1, 'border-radius': 1, 'border-collapse': 1, width: 1, 'min-width': 1, 'max-width': 1, 'white-space': 1, 'font-size': 1, 'line-height': 1 };
@@ -510,12 +519,38 @@
           if (!/^https?:\/\//i.test(href)) child.removeAttribute('href');
           else { child.setAttribute('target', '_blank'); child.setAttribute('rel', 'noopener noreferrer'); }
         }
+        if (child.tagName === 'IMG') {
+          var src = child.getAttribute('src') || '';
+          if (!SAN_IMG_SRC_RE.test(src)) { node.removeChild(child); return; }
+        }
         clean(child);
       });
     })(root);
     return root.innerHTML;
   }
   function stripTags(html) { var d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent || ''; }
+  var MAX_IMG_DATAURL_LEN = 900000; // keep well under Firestore's 1MiB document limit
+  function resizeImageFile(file, maxDim, cb) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = function () { cb(null); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function () { cb(null); };
+    reader.readAsDataURL(file);
+  }
   function fmtDate(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }); } catch (e) { return ''; } }
   function fmtTime(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
   function fmtDateTime(iso) { if (!iso) return ''; var d = fmtDate(iso), t2 = fmtTime(iso); return d && t2 ? d + ' ' + t2 : (d || t2); }
@@ -611,7 +646,9 @@
       }
       html += '<label class="f-label" for="' + f.id + '">' + escapeHtml(f.label) + '</label>';
       if (f.type === 'richtext') {
-        html += '<div class="f-input f-richtext" id="' + f.id + '" contenteditable="true" data-placeholder="' + escapeHtml(f.placeholder || t('richtextPh')) + '">' + (f.value || '') + '</div>';
+        html += '<div class="f-input f-richtext" id="' + f.id + '" contenteditable="true" data-placeholder="' + escapeHtml(f.placeholder || t('richtextPh')) + '">' + (f.value || '') + '</div>' +
+          '<button type="button" class="btn btn-ghost f-img-btn" id="' + f.id + '-imgbtn">' + escapeHtml(t('imgAddBtn')) + '</button>' +
+          '<input type="file" accept="image/*" id="' + f.id + '-imgfile" hidden>';
       } else if (f.type === 'textarea') {
         html += '<textarea class="f-input f-textarea" id="' + f.id + '" rows="6" placeholder="' + escapeHtml(f.placeholder || '') + '">' + escapeHtml(f.value || '') + '</textarea>';
       } else {
@@ -627,12 +664,60 @@
       if (f.type !== 'richtext') return;
       var rt = document.getElementById(f.id);
       rt.addEventListener('paste', function (e) {
-        e.preventDefault();
         var cd = e.clipboardData || window.clipboardData;
+        if (cd && cd.items) {
+          for (var i = 0; i < cd.items.length; i++) {
+            if (cd.items[i].type && cd.items[i].type.indexOf('image/') === 0) {
+              e.preventDefault();
+              var pastedFile = cd.items[i].getAsFile();
+              resizeImageFile(pastedFile, 1280, function (dataUrl) {
+                if (!dataUrl || dataUrl.length > MAX_IMG_DATAURL_LEN) { showToast(t('toastImgTooLarge')); return; }
+                document.execCommand('insertImage', false, dataUrl);
+              });
+              return;
+            }
+          }
+        }
+        e.preventDefault();
         var htmlData = cd ? cd.getData('text/html') : '';
         var textData = cd ? cd.getData('text/plain') : '';
         var clean = htmlData ? sanitizeHtml(htmlData) : escapeHtml(textData).replace(/\n/g, '<br>');
         document.execCommand('insertHTML', false, clean);
+      });
+      var imgBtn = document.getElementById(f.id + '-imgbtn');
+      var imgFile = document.getElementById(f.id + '-imgfile');
+      var savedRange = null;
+      function saveRange() {
+        var sel = window.getSelection();
+        if (sel.rangeCount && rt.contains(sel.anchorNode)) savedRange = sel.getRangeAt(0).cloneRange();
+      }
+      rt.addEventListener('keyup', saveRange);
+      rt.addEventListener('mouseup', saveRange);
+      rt.addEventListener('focus', saveRange);
+      imgBtn.addEventListener('click', function () { imgFile.value = ''; imgFile.click(); });
+      imgFile.addEventListener('change', function () {
+        var file = imgFile.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { showToast(t('toastImgReadError')); return; }
+        resizeImageFile(file, 1280, function (dataUrl) {
+          if (!dataUrl || dataUrl.length > MAX_IMG_DATAURL_LEN) { showToast(t('toastImgTooLarge')); return; }
+          rt.focus();
+          var sel = window.getSelection();
+          var range = null;
+          if (savedRange) { sel.removeAllRanges(); sel.addRange(savedRange); range = savedRange; }
+          else if (sel.rangeCount && rt.contains(sel.getRangeAt(0).commonAncestorContainer)) range = sel.getRangeAt(0);
+          var img = document.createElement('img');
+          img.src = dataUrl;
+          if (range) {
+            range.deleteContents();
+            range.insertNode(img);
+            var r2 = document.createRange(); r2.setStartAfter(img); r2.collapse(true);
+            sel.removeAllRanges(); sel.addRange(r2);
+            savedRange = r2.cloneRange();
+          } else {
+            rt.appendChild(img);
+          }
+        });
       });
     });
     var first = document.getElementById(opts.fields[0].id);
