@@ -1106,6 +1106,11 @@
 
   function subscribe() {
     unsubMaterials = db.collection('materials').onSnapshot(function (snap) {
+      // An empty snapshot served purely from local cache (no server contact yet)
+      // doesn't mean the collection is actually empty -- it just means Firestore
+      // hasn't reached the backend yet (slow/corporate network). Wait for either
+      // real data or a server-confirmed empty result before declaring "no data".
+      if (snap.empty && snap.metadata.fromCache) return;
       state.materials = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.materialsLoaded = true;
       var nb = computeNewestBatch(visibleMaterials());
@@ -1116,6 +1121,7 @@
     }, function (e) { showToast(errMsg(e)); });
 
     unsubGlossary = db.collection('glossary').onSnapshot(function (snap) {
+      if (snap.empty && snap.metadata.fromCache) return;
       state.glossary = snap.docs.map(function (d) { var data = d.data() || {}; data.id = d.id; return data; });
       state.glossaryLoaded = true;
       renderGlossary();
